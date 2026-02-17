@@ -1,0 +1,351 @@
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  width: 380px;
+  background: #f5f7fa;
+  color: #333;
+}
+
+.container {
+  padding: 16px;
+}
+
+/* Header */
+header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1a5276;
+}
+
+header h1 {
+  font-size: 18px;
+  color: #1a5276;
+}
+
+/* Sections */
+section {
+  background: white;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+section h2 {
+  font-size: 14px;
+  color: #1a5276;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Form Styles */
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.form-group {
+  flex: 1;
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #1a5276;
+}
+
+.form-group input::placeholder {
+  color: #aaa;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: #1a5276;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #154360;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 8px;
+  background: #eee;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #ddd;
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #c0392b;
+}
+
+/* Trips List */
+#trips-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+.trip-card {
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.trip-card:last-child {
+  margin-bottom: 0;
+}
+
+.trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.trip-route {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1a5276;
+}
+
+.trip-date {
+  font-size: 12px;
+  color: #666;
+}
+
+.trip-prices {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #ddd;
+}
+
+.price-info {
+  font-size: 12px;
+}
+
+.price-label {
+  color: #888;
+}
+
+.price-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.price-value.current {
+  color: #27ae60;
+}
+
+.price-value.higher {
+  color: #e74c3c;
+}
+
+.price-value.lower {
+  color: #27ae60;
+  font-weight: 700;
+}
+
+.price-drop-badge {
+  background: #27ae60;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.trip-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Settings */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.setting-item label {
+  font-size: 13px;
+  color: #666;
+}
+
+.setting-item select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+footer p {
+  font-size: 11px;
+  color: #999;
+}
+
+/* Status indicators */
+.status-checking {
+  color: #f39c12;
+}
+
+.status-success {
+  color: #27ae60;
+}
+
+.status-error {
+  color: #e74c3c;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ddd;
+  border-top-color: #1a5276;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Email settings */
+.setting-group {
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+#email-input-group {
+  margin-top: 8px;
+}
+
+#email-input-group input {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+#email-input-group .btn-small {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.btn-small {
+  background: #1a5276;
+  color: white;
+  border: none;
+}
+
+.btn-small:hover {
+  background: #154360;
+}
+
+.btn-outline {
+  background: white;
+  color: #1a5276;
+  border: 1px solid #1a5276;
+}
+
+.btn-outline:hover {
+  background: #f0f4f8;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.email-status {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.email-status.success {
+  color: #27ae60;
+}
+
+.email-status.error {
+  color: #e74c3c;
+}
