@@ -71,7 +71,15 @@ function createTripCard(trip) {
   const isPriceHigher = priceDiff !== null && priceDiff < 0;
 
   const currentPriceClass = isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : 'current');
-  const currentPriceDisplay = trip.currentPrice !== null ? `$${trip.currentPrice.toFixed(2)}` : 'Checking...';
+  // Show different status based on whether we've checked yet
+  let currentPriceDisplay;
+  if (trip.currentPrice !== null) {
+    currentPriceDisplay = `$${trip.currentPrice.toFixed(2)}`;
+  } else if (trip.lastChecked) {
+    currentPriceDisplay = 'Unavailable';
+  } else {
+    currentPriceDisplay = 'Checking...';
+  }
 
   const priceBadge = isPriceLower 
     ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>` 

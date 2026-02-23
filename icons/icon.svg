@@ -1,33 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Background circle -->
-  <circle cx="64" cy="64" r="60" fill="#1a5276"/>
-  
-  <!-- Train body -->
-  <rect x="20" y="50" width="88" height="35" rx="8" fill="#ffffff"/>
-  
-  <!-- Train front -->
-  <path d="M100 50 L115 60 L115 75 L100 85 Z" fill="#ffffff"/>
-  
-  <!-- Windows -->
-  <rect x="28" y="58" width="12" height="10" rx="2" fill="#1a5276"/>
-  <rect x="45" y="58" width="12" height="10" rx="2" fill="#1a5276"/>
-  <rect x="62" y="58" width="12" height="10" rx="2" fill="#1a5276"/>
-  <rect x="79" y="58" width="12" height="10" rx="2" fill="#1a5276"/>
-  
-  <!-- Wheels -->
-  <circle cx="35" cy="88" r="8" fill="#333"/>
-  <circle cx="60" cy="88" r="8" fill="#333"/>
-  <circle cx="85" cy="88" r="8" fill="#333"/>
-  
-  <!-- Wheel centers -->
-  <circle cx="35" cy="88" r="3" fill="#666"/>
-  <circle cx="60" cy="88" r="3" fill="#666"/>
-  <circle cx="85" cy="88" r="3" fill="#666"/>
-  
-  <!-- Track -->
-  <rect x="10" y="95" width="108" height="4" fill="#666"/>
-  
-  <!-- Price tag indicator -->
-  <circle cx="100" cy="35" r="18" fill="#27ae60"/>
-  <text x="100" y="41" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">$</text>
+  <!-- Train emoji 🚂 rendered as SVG -->
+  <text x="64" y="96" font-size="100" text-anchor="middle" dominant-baseline="middle">🚂</text>
 </svg>
