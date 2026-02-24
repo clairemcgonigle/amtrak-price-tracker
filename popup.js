@@ -11,12 +11,21 @@ const emailInputGroup = document.getElementById('email-input-group');
 const notificationEmailInput = document.getElementById('notification-email');
 const saveEmailBtn = document.getElementById('save-email');
 const testEmailBtn = document.getElementById('test-email');
+const refreshBtn = document.getElementById('refresh-trips');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTrips();
   await loadSettings();
   updateLastChecked();
+});
+
+// Refresh button
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.classList.add('spinning');
+  await loadTrips();
+  updateLastChecked();
+  setTimeout(() => refreshBtn.classList.remove('spinning'), 500);
 });
 
 // Form submission - Add new trip
@@ -71,22 +80,52 @@ function createTripCard(trip) {
   const isPriceHigher = priceDiff !== null && priceDiff < 0;
 
   const currentPriceClass = isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : 'current');
-  // Show different status based on whether we've checked yet
-  let currentPriceDisplay;
-  if (trip.currentPrice !== null) {
-    currentPriceDisplay = `$${trip.currentPrice.toFixed(2)}`;
-  } else if (trip.lastChecked) {
-    currentPriceDisplay = 'Unavailable';
-  } else {
-    currentPriceDisplay = 'Checking...';
-  }
-
-  const priceBadge = isPriceLower 
-    ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>` 
-    : '';
-
+  
   const formattedDate = formatDate(trip.travelDate);
-  const trainInfo = trip.trainNumber ? ` • Train #${trip.trainNumber}` : '';
+  const trainWarning = trip.trainNotFound ? ' ⚠️' : '';
+  const trainInfo = trip.trainNumber ? ` • Train #${trip.trainNumber}${trainWarning}` : '';
+
+  // Build price display section based on train found status
+  let priceSection;
+  if (trip.trainNotFound) {
+    // Train not found - show simple layout with orange message
+    const formattedPriceDate = formatDate(trip.travelDate);
+    priceSection = `
+      <div class="price-row">
+        <span class="price-label">Paid:</span>
+        <span class="price-value">$${trip.pricePaid.toFixed(2)}</span>
+      </div>
+      <div class="train-not-found-row">
+        <span class="train-not-found">Train not found. Lowest train price from ${trip.origin} to ${trip.destination} on ${formattedPriceDate}: $${trip.currentPrice.toFixed(2)}</span>
+      </div>
+    `;
+  } else {
+    // Train found or no train specified - show full layout with Current: and badge
+    let currentPriceDisplay;
+    if (trip.currentPrice !== null) {
+      currentPriceDisplay = `$${trip.currentPrice.toFixed(2)}`;
+    } else if (trip.lastChecked) {
+      currentPriceDisplay = 'Unavailable';
+    } else {
+      currentPriceDisplay = 'Checking...';
+    }
+    
+    const priceBadge = isPriceLower 
+      ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>` 
+      : '';
+    
+    priceSection = `
+      <div class="price-info">
+        <span class="price-label">Paid: </span>
+        <span class="price-value">$${trip.pricePaid.toFixed(2)}</span>
+      </div>
+      <div class="price-info">
+        <span class="price-label">Current: </span>
+        <span class="price-value ${currentPriceClass}">${currentPriceDisplay}</span>
+      </div>
+      ${priceBadge}
+    `;
+  }
 
   return `
     <div class="trip-card" data-trip-id="${trip.id}">
@@ -95,15 +134,7 @@ function createTripCard(trip) {
         <span class="trip-date">${formattedDate}${trainInfo}</span>
       </div>
       <div class="trip-prices">
-        <div class="price-info">
-          <span class="price-label">Paid: </span>
-          <span class="price-value">$${trip.pricePaid.toFixed(2)}</span>
-        </div>
-        <div class="price-info">
-          <span class="price-label">Current: </span>
-          <span class="price-value ${currentPriceClass}">${currentPriceDisplay}</span>
-        </div>
-        ${priceBadge}
+        ${priceSection}
       </div>
       <div class="trip-actions">
         <button class="btn-danger btn-delete" data-trip-id="${trip.id}">Remove</button>

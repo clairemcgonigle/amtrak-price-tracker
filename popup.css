@@ -46,6 +46,44 @@ section h2 {
   border-bottom: 1px solid #eee;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.section-header h2 {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-icon:hover {
+  background: #e8f4f8;
+}
+
+.btn-icon.spinning {
+  animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Form Styles */
 .form-row {
   display: flex;
@@ -188,6 +226,18 @@ section h2 {
   font-size: 12px;
 }
 
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.current-price-row {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .price-label {
   color: #888;
 }
@@ -217,6 +267,18 @@ section h2 {
   border-radius: 10px;
   font-size: 10px;
   font-weight: 600;
+}
+
+.train-not-found-row {
+  text-align: center;
+  margin-top: 8px;
+  padding: 0px 12px;
+}
+
+.train-not-found {
+  color: #e67e22;
+  font-size: 11px;
+  font-style: italic;
 }
 
 .trip-actions {

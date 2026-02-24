@@ -85,21 +85,35 @@ async function checkAllPrices() {
     }
 
     try {
-      const currentPrice = await fetchAmtrakPrice(trip);
+      const priceResult = await fetchAmtrakPrice(trip);
       
       // Always update lastChecked so we know a check was attempted
       trip.lastChecked = new Date().toISOString();
       
-      if (currentPrice !== null) {
+      if (priceResult !== null) {
         const previousPrice = trip.currentPrice;
-        trip.currentPrice = currentPrice;
+        const wasTrainNotFound = trip.trainNotFound;
         
-        // Check if price dropped below paid price
-        if (currentPrice < trip.pricePaid) {
-          await notifyPriceDrop(trip, currentPrice);
+        // Handle both old format (just a number) and new format (object)
+        if (typeof priceResult === 'object') {
+          trip.currentPrice = priceResult.price;
+          trip.trainNotFound = !priceResult.trainFound && trip.trainNumber;
+        } else {
+          trip.currentPrice = priceResult;
+          trip.trainNotFound = false;
         }
         
-        console.log(`${trip.origin}→${trip.destination}: $${currentPrice} (paid: $${trip.pricePaid})`);
+        // Check if price dropped below paid price
+        if (trip.currentPrice < trip.pricePaid) {
+          await notifyPriceDrop(trip, trip.currentPrice);
+        }
+        
+        // Notify if train was not found (only first time)
+        if (trip.trainNotFound && !wasTrainNotFound) {
+          await notifyTrainNotFound(trip);
+        }
+        
+        console.log(`${trip.origin}→${trip.destination}: $${trip.currentPrice} (paid: $${trip.pricePaid})${trip.trainNotFound ? ' [train not found]' : ''}`);
       } else {
         console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
       }
@@ -201,7 +215,7 @@ async function fetchAmtrakPrice(trip) {
     // If we found a specific train match, use that price
     if (result?.trainPrice !== undefined && result.trainPrice !== null) {
       console.log(`Found price for train #${trip.trainNumber}: $${result.trainPrice}`);
-      return result.trainPrice;
+      return { price: result.trainPrice, trainFound: true };
     }
 
     // Fallback: use lowest price from any train
@@ -212,8 +226,9 @@ async function fetchAmtrakPrice(trip) {
       
       if (validPrices.length > 0) {
         const lowestPrice = Math.min(...validPrices);
-        console.log(`Found lowest price for ${trip.origin}→${trip.destination}: $${lowestPrice}`);
-        return lowestPrice;
+        console.log(`Train #${trip.trainNumber} not found, lowest price: $${lowestPrice}`);
+        // Return with trainFound: false if user specified a train but we didn't find it
+        return { price: lowestPrice, trainFound: !trip.trainNumber };
       }
     }
     
@@ -418,6 +433,17 @@ async function notifyPriceDrop(trip, currentPrice) {
   if (settings.emailNotifications && settings.notificationEmail) {
     await sendPriceDropEmail(trip, currentPrice, settings.notificationEmail);
   }
+}
+
+// Send notification when train is not found
+async function notifyTrainNotFound(trip) {
+  await chrome.notifications.create(`train-not-found-${trip.id}`, {
+    type: 'basic',
+    iconUrl: 'icons/icon128.png',
+    title: '⚠️ Train Not Found',
+    message: `We couldn't find Train ${trip.trainNumber} from ${trip.origin} to ${trip.destination} on ${formatDate(trip.travelDate)}. Please check your train details and update your train information to track this trip.`,
+    priority: 1
+  });
 }
 
 // Format date for notifications
