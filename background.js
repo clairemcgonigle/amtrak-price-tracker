@@ -87,22 +87,29 @@ async function checkAllPrices() {
     try {
       const currentPrice = await fetchAmtrakPrice(trip);
       
+      // Always update lastChecked so we know a check was attempted
+      trip.lastChecked = new Date().toISOString();
+      
       if (currentPrice !== null) {
         const previousPrice = trip.currentPrice;
         trip.currentPrice = currentPrice;
-        trip.lastChecked = new Date().toISOString();
         
-        await updateTrip(trip);
-
         // Check if price dropped below paid price
         if (currentPrice < trip.pricePaid) {
           await notifyPriceDrop(trip, currentPrice);
         }
         
         console.log(`${trip.origin}→${trip.destination}: $${currentPrice} (paid: $${trip.pricePaid})`);
+      } else {
+        console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
       }
+      
+      await updateTrip(trip);
     } catch (error) {
       console.error(`Error checking price for trip ${trip.id}:`, error);
+      // Still update lastChecked on error so UI shows "Unavailable" not "Checking..."
+      trip.lastChecked = new Date().toISOString();
+      await updateTrip(trip);
     }
   }
 
@@ -116,18 +123,10 @@ async function checkAllPrices() {
 }
 
 // Fetch price from Amtrak
-// Navigates to search page and scrapes the prices from the DOM
+// Navigates to homepage and automates the search form
 async function fetchAmtrakPrice(trip) {
   try {
     console.log(`Fetching price for ${trip.origin}→${trip.destination}...`);
-    
-    // Build the search URL
-    const searchUrl = `https://www.amtrak.com/tickets/departure.html?` + 
-      `origin=${trip.origin}&destination=${trip.destination}&` +
-      `departureDate=${trip.travelDate}&adults=1&children=0&infants=0&` +
-      `seniors=0&youth=0&travelers=1`;
-    
-    console.log(`Navigating to: ${searchUrl}`);
     
     // Find or create an Amtrak tab
     let tab = await findOrCreateAmtrakTab();
@@ -136,34 +135,90 @@ async function fetchAmtrakPrice(trip) {
       return null;
     }
 
-    // Navigate to the search results
-    await chrome.tabs.update(tab.id, { url: searchUrl });
-    
-    // Wait for page to load
+    // Navigate to homepage
+    console.log('Navigating to Amtrak homepage...');
+    await chrome.tabs.update(tab.id, { url: 'https://www.amtrak.com/' });
     await waitForTabLoad(tab.id);
     
-    // Wait extra time for dynamic content to render
-    console.log('Waiting for results to render...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait longer for SPA to fully load and render booking form
+    console.log('Waiting for page to fully load...');
+    await new Promise(resolve => setTimeout(resolve, 6000));
 
-    // Inject and run the scraping script
-    console.log('Scraping prices from page...');
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: scrapePricesFromDOM,
-      args: [trip.trainNumber]
+    // Inject content script
+    console.log('Injecting content script...');
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+    } catch (injectError) {
+      console.log('Content script note:', injectError.message);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Tell content script to fill form and search
+    console.log('Filling search form...');
+    const fillResult = await chrome.tabs.sendMessage(tab.id, {
+      action: 'fillAndSearch',
+      trip: {
+        origin: trip.origin,
+        destination: trip.destination,
+        travelDate: trip.travelDate
+      }
     });
 
-    console.log('Scrape results:', results);
-
-    if (results?.[0]?.result?.price) {
-      const price = results[0].result.price;
-      console.log(`Found price for ${trip.origin}→${trip.destination}: $${price}`);
-      return price;
-    } else {
-      console.log(`No price found: ${results?.[0]?.result?.error || 'Unknown error'}`);
+    if (!fillResult?.success) {
+      console.log('Failed to fill search form:', fillResult?.error);
       return null;
     }
+
+    // Wait for results page to load (form submission navigates to new page)
+    console.log('Waiting for search results page to load...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    // Re-inject content script on the results page (old script was destroyed by navigation)
+    console.log('Re-injecting content script on results page...');
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+    } catch (injectError) {
+      console.log('Content script re-injection note:', injectError.message);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Scrape prices from results, passing train number to find specific train
+    const result = await chrome.tabs.sendMessage(tab.id, {
+      action: 'scrapePrices',
+      trainNumber: trip.trainNumber || null
+    });
+
+    console.log('Scrape result:', result);
+
+    // If we found a specific train match, use that price
+    if (result?.trainPrice !== undefined && result.trainPrice !== null) {
+      console.log(`Found price for train #${trip.trainNumber}: $${result.trainPrice}`);
+      return result.trainPrice;
+    }
+
+    // Fallback: use lowest price from any train
+    if (result?.prices && result.prices.length > 0) {
+      const validPrices = result.prices
+        .map(p => typeof p === 'number' ? p : p.price)
+        .filter(p => p >= 20 && p <= 2000);
+      
+      if (validPrices.length > 0) {
+        const lowestPrice = Math.min(...validPrices);
+        console.log(`Found lowest price for ${trip.origin}→${trip.destination}: $${lowestPrice}`);
+        return lowestPrice;
+      }
+    }
+    
+    console.log('No prices found on page');
+    return null;
 
   } catch (error) {
     console.error('Failed to fetch Amtrak price:', error);
