@@ -1,6 +1,5 @@
 import { saveTrip, getTrips, deleteTrip, getSettings, saveSettings } from './storage.js';
 
-// DOM Elements
 const tripForm = document.getElementById('trip-form');
 const tripsList = document.getElementById('trips-list');
 const checkNowBtn = document.getElementById('check-now');
@@ -55,7 +54,7 @@ tripForm.addEventListener('submit', async (e) => {
 // Load and display trips
 async function loadTrips() {
   const trips = await getTrips();
-  
+
   if (trips.length === 0) {
     tripsList.innerHTML = '<p class="empty-state">No trips being tracked yet.</p>';
     return;
@@ -80,7 +79,7 @@ function createTripCard(trip) {
   const isPriceHigher = priceDiff !== null && priceDiff < 0;
 
   const currentPriceClass = isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : 'current');
-  
+
   const formattedDate = formatDate(trip.travelDate);
   const trainWarning = trip.trainNotFound ? ' ⚠️' : '';
   const trainInfo = trip.trainNumber ? ` • Train #${trip.trainNumber}${trainWarning}` : '';
@@ -109,11 +108,11 @@ function createTripCard(trip) {
     } else {
       currentPriceDisplay = 'Checking...';
     }
-    
-    const priceBadge = isPriceLower 
-      ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>` 
+
+    const priceBadge = isPriceLower
+      ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>`
       : '';
-    
+
     priceSection = `
       <div class="price-info">
         <span class="price-label">Paid: </span>
@@ -147,7 +146,7 @@ function createTripCard(trip) {
 async function loadSettings() {
   const settings = await getSettings();
   checkIntervalSelect.value = settings.checkInterval || 4;
-  
+
   // Email notification settings
   emailNotificationsCheckbox.checked = settings.emailNotifications || false;
   notificationEmailInput.value = settings.notificationEmail || '';
@@ -158,11 +157,11 @@ async function loadSettings() {
 checkIntervalSelect.addEventListener('change', async () => {
   const interval = parseInt(checkIntervalSelect.value);
   await saveSettings({ checkInterval: interval });
-  
+
   // Update the alarm interval
-  chrome.runtime.sendMessage({ 
-    action: 'updateAlarmInterval', 
-    interval: interval 
+  chrome.runtime.sendMessage({
+    action: 'updateAlarmInterval',
+    interval: interval
   });
 });
 
@@ -191,14 +190,14 @@ testEmailBtn.addEventListener('click', async () => {
     showEmailStatus('Please enter a valid email first', 'error');
     return;
   }
-  
+
   testEmailBtn.disabled = true;
   testEmailBtn.textContent = 'Sending...';
-  
+
   chrome.runtime.sendMessage({ action: 'testEmail', email }, (response) => {
     testEmailBtn.disabled = false;
     testEmailBtn.textContent = 'Test';
-    
+
     if (response?.success) {
       showEmailStatus('Test email sent!', 'success');
     } else {
@@ -227,7 +226,7 @@ function showEmailStatus(message, type) {
 checkNowBtn.addEventListener('click', async () => {
   checkNowBtn.disabled = true;
   checkNowBtn.innerHTML = '<span class="spinner"></span> Checking...';
-  
+
   chrome.runtime.sendMessage({ action: 'checkPrices' }, async (response) => {
     checkNowBtn.disabled = false;
     checkNowBtn.textContent = 'Check Prices Now';
@@ -254,10 +253,10 @@ function generateId() {
 
 function formatDate(dateString) {
   const date = new Date(dateString + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
   });
 }
 
