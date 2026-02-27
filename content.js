@@ -201,7 +201,7 @@ if (window._amtrakPriceTrackerLoaded) {
     console.log('Looking for train number:', targetTrainNumber || 'any');
 
     const maxPages = 5; // Safety limit
-    let allPrices = [];
+    let allPrices = {};
     let trainPrice = null;
 
     for (let page = 0; page < maxPages; page++) {
@@ -209,7 +209,7 @@ if (window._amtrakPriceTrackerLoaded) {
       const pageResult = scrapeTrainCards(targetTrainNumber);
 
       // Collect all prices
-      allPrices = allPrices.concat(pageResult.prices);
+      allPrices = {...allPrices, ...pageResult.prices};
 
       // If we found the target train, return immediately
       if (pageResult.trainPrice !== null) {
@@ -282,11 +282,40 @@ if (window._amtrakPriceTrackerLoaded) {
     return null;
   }
 
+  function scrapeLowestPricePerTrain() {
+    const pricesByTrain = {};
+    const cards = document.querySelectorAll('.journey-leg');
+
+    cards.forEach((card) => {
+      let trainNumber = null;
+
+      const trainNumberNode = card.querySelector('.train-name span');
+
+      if (trainNumberNode) {
+        trainNumber = trainNumberNode.textContent.trim();
+      }
+
+      if (trainNumber) {
+        const lowestPriceNode = card.querySelector('.price-tag');
+        const lowestPrice = parseFloat(lowestPriceNode.textContent.trim());
+        pricesByTrain[trainNumber] = lowestPrice;
+      }
+    });
+
+    return pricesByTrain;
+  }
+
   /**
    * Scrape train cards from the current page
    * Returns prices and optionally the price for a specific train
    */
   function scrapeTrainCards(targetTrainNumber) {
+    const pricesByTrain = scrapeLowestPricePerTrain();
+    if (targetTrainNumber) {
+      const trainPrice = pricesByTrain[targetTrainNumber] ?? null;
+      return { prices: pricesByTrain, trainPrice: trainPrice };
+    }
+
     const prices = [];
     let trainPrice = null;
     
