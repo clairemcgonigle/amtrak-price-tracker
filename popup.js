@@ -38,6 +38,7 @@ tripForm.addEventListener('submit', async (e) => {
     travelDate: document.getElementById('travel-date').value,
     trainNumber: document.getElementById('train-number').value.trim() || null,
     pricePaid: parseFloat(document.getElementById('price-paid').value),
+    ticketClass: document.getElementById('ticket-class').value || null,
     currentPrice: null,
     lastChecked: null,
     createdAt: new Date().toISOString()
@@ -86,11 +87,15 @@ function createTripCard(trip) {
 
   // Build price display section based on train found status
   let priceSection;
+  const ticketClassText = "Ticket class: " + (trip.ticketClass ? trip.ticketClass.charAt(0).toUpperCase() + trip.ticketClass.slice(1) : 'Not specified');
+
   if (trip.trainNotFound) {
-    // Train not found - show simple layout with orange message
+    // Train not found - show warning message
     const formattedPriceDate = formatDate(trip.travelDate);
     priceSection = `
-      <div class="price-row">
+      <div class="price-row-compact">
+        <span class="ticket-class-inline">${ticketClassText}</span>
+        <span class="price-divider">|</span>
         <span class="price-label">Paid:</span>
         <span class="price-value">$${trip.pricePaid.toFixed(2)}</span>
       </div>
@@ -99,7 +104,7 @@ function createTripCard(trip) {
       </div>
     `;
   } else {
-    // Train found or no train specified - show full layout with Current: and badge
+    // Train found or no train specified
     let currentPriceDisplay;
     if (trip.currentPrice !== null) {
       currentPriceDisplay = `$${trip.currentPrice.toFixed(2)}`;
@@ -110,19 +115,21 @@ function createTripCard(trip) {
     }
 
     const priceBadge = isPriceLower
-      ? `<span class="price-drop-badge">↓ $${priceDiff.toFixed(2)} savings!</span>`
+      ? `<span class="price-divider">|</span><span class="price-drop-badge">↓$${priceDiff.toFixed(2)} savings!</span>`
       : '';
 
     priceSection = `
-      <div class="price-info">
-        <span class="price-label">Paid: </span>
+      <div class="price-row-compact">
+        <span class="ticket-class-inline">${ticketClassText}</span>
+        <span class="price-divider">|</span>
+        <span class="price-label">Paid:</span>
         <span class="price-value">$${trip.pricePaid.toFixed(2)}</span>
       </div>
-      <div class="price-info">
-        <span class="price-label">Current: </span>
+      <div class="price-row-compact">
+        <span class="price-label">Current:</span>
         <span class="price-value ${currentPriceClass}">${currentPriceDisplay}</span>
+        ${priceBadge}
       </div>
-      ${priceBadge}
     `;
   }
 
@@ -136,7 +143,14 @@ function createTripCard(trip) {
         ${priceSection}
       </div>
       <div class="trip-actions">
-        <button class="btn-danger btn-delete" data-trip-id="${trip.id}">Remove</button>
+        <button class="btn-delete" data-trip-id="${trip.id}" title="Remove trip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
       </div>
     </div>
   `;

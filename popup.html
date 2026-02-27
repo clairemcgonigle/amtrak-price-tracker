@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Amtrak Price Tracker</title>
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <div class="container">
     <header>
@@ -38,9 +40,19 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="price-paid">Price Paid ($)</label>
-          <input type="number" id="price-paid" step="0.01" min="0" placeholder="89.00" required>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="price-paid">Price Paid ($)</label>
+            <input type="number" id="price-paid" step="0.01" min="0" placeholder="89.00" required>
+          </div>
+          <div class="form-group">
+            <label for="ticket-class">Ticket Class</label>
+            <select id="ticket-class">
+              <option value="economy">Coach</option>
+              <option value="business">Business</option>
+              <option value="first">First</option>
+            </select>
+          </div>
         </div>
 
         <button type="submit" class="btn-primary">Add Trip</button>
@@ -70,7 +82,7 @@
           <option value="24">24 hours</option>
         </select>
       </div>
-      
+
       <div class="setting-group">
         <div class="setting-item">
           <label for="email-notifications">Email notifications</label>
@@ -83,7 +95,7 @@
           <button type="button" id="test-email" class="btn-small btn-outline">Test</button>
         </div>
       </div>
-      
+
       <button id="check-now" class="btn-secondary">Check Prices Now</button>
     </section>
 
@@ -94,4 +106,5 @@
 
   <script src="popup.js" type="module"></script>
 </body>
+
 </html>

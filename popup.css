@@ -80,8 +80,13 @@ section h2 {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Form Styles */
@@ -214,12 +219,31 @@ section h2 {
 }
 
 .trip-prices {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed #ddd;
+}
+
+.price-row-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  padding-left: 2px;
+  padding-top: 4px;
+}
+
+.price-row-compact:last-child {
+  margin-bottom: 0;
+}
+
+.ticket-class-inline {
+  color: #666;
+}
+
+.price-divider {
+  color: #ccc;
 }
 
 .price-info {
@@ -263,9 +287,9 @@ section h2 {
 .price-drop-badge {
   background: #27ae60;
   color: white;
-  padding: 2px 6px;
+  padding: 3px 6px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -277,14 +301,29 @@ section h2 {
 
 .train-not-found {
   color: #e67e22;
-  font-size: 11px;
+  font-size: 12px;
   font-style: italic;
 }
 
 .trip-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 4px 0 0;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-delete:hover {
+  opacity: 1;
 }
 
 /* Settings */
@@ -344,7 +383,9 @@ footer p {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Email settings */
