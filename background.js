@@ -65,6 +65,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Check prices for all tracked trips
 async function checkAllPrices() {
+  // reset the "error on last check" flag
+  await saveSettings({ lastCheckError: false });
+
   const trips = await getTrips();
 
   if (trips.length === 0) {
@@ -112,6 +115,7 @@ async function checkAllPrices() {
         console.log(`${trip.origin}→${trip.destination}: $${trip.currentPrice} (paid: $${trip.pricePaid})${trip.trainNotFound ? ' [train not found]' : ''}`);
       } else {
         console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
+        await saveSettings({ lastCheckError: true });
       }
 
       await updateTrip(trip);
@@ -120,6 +124,7 @@ async function checkAllPrices() {
       // Still update lastChecked on error so UI shows "Unavailable" not "Checking..."
       trip.lastChecked = new Date().toISOString();
       await updateTrip(trip);
+      await saveSettings({ lastCheckError: true });
     }
   }
 
@@ -147,6 +152,7 @@ async function fetchAmtrakPrice(trip) {
 
     // Navigate to homepage
     console.log('Navigating to Amtrak homepage...');
+    await chrome.tabs.highlight({ tabs: tab.index });
     await chrome.tabs.update(tab.id, { url: 'https://www.amtrak.com/' });
     await waitForTabLoad(tab.id);
 

@@ -255,6 +255,9 @@ async function updateLastChecked() {
   if (settings.lastChecked) {
     const date = new Date(settings.lastChecked);
     lastCheckedSpan.textContent = formatDateTime(date);
+    if (settings.lastCheckError) {
+      lastCheckedSpan.textContent += ' (ERROR)';
+    }
   } else {
     lastCheckedSpan.textContent = 'Never';
   }
