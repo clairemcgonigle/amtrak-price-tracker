@@ -150,7 +150,7 @@ async function fetchAmtrakPrice(trip) {
     await chrome.tabs.update(tab.id, { url: 'https://www.amtrak.com/' });
     await waitForTabLoad(tab.id);
 
-    // Wait longer for SPA to fully load and render booking form
+    // Wait for SPA to fully load and render booking form
     console.log('Waiting for page to fully load...');
     await new Promise(resolve => setTimeout(resolve, 6000));
 
@@ -168,7 +168,6 @@ async function fetchAmtrakPrice(trip) {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Tell content script to fill form and search
-    // Note: This may throw if the page navigates (which means form was submitted)
     console.log('Filling search form...');
     let fillResult;
     try {
@@ -195,10 +194,10 @@ async function fetchAmtrakPrice(trip) {
       return null;
     }
 
-    // Wait for results page to load (form submission navigates to new page)
+    // Wait for results page to load
     await new Promise(resolve => setTimeout(resolve, 10000));
 
-    // Re-inject content script on the results page (old script was destroyed by navigation)
+    // Re-inject content script on the results page
     console.log('Re-injecting content script on results page...');
     try {
       await chrome.scripting.executeScript({
@@ -211,12 +210,13 @@ async function fetchAmtrakPrice(trip) {
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Scrape prices from results, passing train number to find specific train
+    // Scrape prices from results, passing train number and class to find specific train
     let result;
     try {
       result = await chrome.tabs.sendMessage(tab.id, {
         action: 'scrapePrices',
-        trainNumber: trip.trainNumber || null
+        trainNumber: trip.trainNumber || null,
+        ticketClass: trip.ticketClass || null
       });
     } catch (err) {
       console.log('Failed to scrape prices:', err.message);

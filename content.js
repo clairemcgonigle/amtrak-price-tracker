@@ -16,7 +16,7 @@ if (window._amtrakPriceTrackerLoaded) {
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'scrapePrices') {
-      scrapePricesWithPagination(message.trainNumber)
+      scrapePricesWithPagination(message.trainNumber, message.ticketClass)
         .then(result => sendResponse(result))
         .catch(error => sendResponse({ prices: [], error: error.message }));
       return true; // Keep channel open for async response
@@ -196,9 +196,10 @@ if (window._amtrakPriceTrackerLoaded) {
    * Scrape prices with pagination support
    * Pages through results to find a specific train number
    */
-  async function scrapePricesWithPagination(targetTrainNumber) {
+  async function scrapePricesWithPagination(targetTrainNumber, targetClass) {
     console.log('Amtrak Price Tracker: Scraping with pagination...');
     console.log('Looking for train number:', targetTrainNumber || 'any');
+    console.log('Looking for class:', targetClass || 'any (lowest)');
 
     const maxPages = 5; // Safety limit
     let allPrices = [];
@@ -206,7 +207,7 @@ if (window._amtrakPriceTrackerLoaded) {
 
     for (let page = 0; page < maxPages; page++) {
       // Scrape current page for train cards with train numbers
-      const pageResult = scrapeTrainCards(targetTrainNumber);
+      const pageResult = scrapeTrainCards(targetTrainNumber, targetClass);
 
       // Collect all prices
       allPrices = allPrices.concat(pageResult.prices);
@@ -284,14 +285,16 @@ if (window._amtrakPriceTrackerLoaded) {
 
   /**
    * Scrape train cards from the current page
-   * Returns prices and optionally the price for a specific train
+   * Returns prices and optionally the price for a specific train and class
    */
-  function scrapeTrainCards(targetTrainNumber) {
+  function scrapeTrainCards(targetTrainNumber, targetClass) {
     const prices = [];
     let trainPrice = null;
     
     // Normalize target train number to string for comparison
     const targetStr = targetTrainNumber ? String(targetTrainNumber) : null;
+    // Normalize target class to lowercase for comparison
+    const targetClassLower = targetClass ? targetClass.toLowerCase() : null;
 
     // Look for train result cards - these usually contain train number and price together
     const cardSelectors = [
@@ -315,17 +318,66 @@ if (window._amtrakPriceTrackerLoaded) {
         cardText.match(/\b(\d{3,4})\b.*(?:Acela|Regional|Northeast|Empire)/i);
       const cardTrainNumber = trainMatch ? trainMatch[1] : null;
 
-      // Extract price from the card
-      const priceMatch = cardText.match(/\$\s*([\d,]+(?:\.\d{2})?)/);
-      const cardPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : null;
+      // Look for class buttons within this card (e.g., "Coach from $115")
+      const classButtons = card.querySelectorAll('button, [class*="fare"], [class*="class"], [class*="price"]');
+      let classPrices = [];
+      
+      classButtons.forEach(btn => {
+        const btnText = (btn.textContent || '').toLowerCase();
+        // Match pattern like "Coach from $115" or "Business $89"
+        const priceMatch = btnText.match(/\$\s*([\d,]+(?:\.\d{2})?)/); 
+        if (priceMatch) {
+          const price = parseFloat(priceMatch[1].replace(',', ''));
+          if (price >= 20 && price <= 2000) {
+            // Determine the class from button text
+            let className = null;
+            if (btnText.includes('coach')) className = 'coach';
+            else if (btnText.includes('business')) className = 'business';
+            else if (btnText.includes('first')) className = 'first';
+            
+            classPrices.push({ price, className });
+          }
+        }
+      });
 
-      if (cardPrice && cardPrice >= 20 && cardPrice <= 2000) {
-        prices.push(cardPrice);
+      // If we found class-specific prices
+      if (classPrices.length > 0) {
+        // Add all prices to the general list
+        classPrices.forEach(cp => prices.push(cp.price));
 
         // Check if this is our target train
         if (targetTrainNumber && cardTrainNumber === targetTrainNumber) {
-          console.log(`Match! Train #${cardTrainNumber} price: $${cardPrice}`);
-          trainPrice = cardPrice;
+          // Look for the target class price
+          if (targetClassLower) {
+            const classMatch = classPrices.find(cp => cp.className === targetClassLower);
+            if (classMatch) {
+              console.log(`Match! Train #${cardTrainNumber} ${targetClass} price: $${classMatch.price}`);
+              trainPrice = classMatch.price;
+            } else {
+              // Class not found on this train, use lowest as fallback
+              const lowestPrice = Math.min(...classPrices.map(cp => cp.price));
+              console.log(`Train #${cardTrainNumber} found but ${targetClass} class not available. Lowest: $${lowestPrice}`);
+              trainPrice = lowestPrice;
+            }
+          } else {
+            // No target class specified, use lowest price
+            trainPrice = Math.min(...classPrices.map(cp => cp.price));
+            console.log(`Match! Train #${cardTrainNumber} lowest price: $${trainPrice}`);
+          }
+        }
+      } else {
+        // Fallback: extract any price from the card text
+        const priceMatch = cardText.match(/\$\s*([\d,]+(?:\.\d{2})?)/); 
+        const cardPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : null;
+
+        if (cardPrice && cardPrice >= 20 && cardPrice <= 2000) {
+          prices.push(cardPrice);
+
+          // Check if this is our target train
+          if (targetTrainNumber && cardTrainNumber === targetTrainNumber) {
+            console.log(`Match! Train #${cardTrainNumber} price: $${cardPrice}`);
+            trainPrice = cardPrice;
+          }
         }
       }
     });
