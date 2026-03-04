@@ -308,6 +308,7 @@ if (window._amtrakPriceTrackerLoaded) {
     ];
 
     const cards = document.querySelectorAll(cardSelectors.join(', '));
+    console.log(`Amtrak Price Tracker: Found ${cards.length} train cards on page`);
 
     cards.forEach((card, index) => {
       const cardText = card.textContent || '';
@@ -317,6 +318,10 @@ if (window._amtrakPriceTrackerLoaded) {
       const trainMatch = cardText.match(/(?:Train|#)\s*(\d{1,4})\b/i) ||
         cardText.match(/\b(\d{3,4})\b.*(?:Acela|Regional|Northeast|Empire)/i);
       const cardTrainNumber = trainMatch ? trainMatch[1] : null;
+      
+      if (cardTrainNumber) {
+        console.log(`  Card ${index + 1}: Train #${cardTrainNumber}`);
+      }
 
       // Look for class buttons within this card (e.g., "Coach from $115")
       const classButtons = card.querySelectorAll('button, [class*="fare"], [class*="class"], [class*="price"]');
@@ -384,10 +389,16 @@ if (window._amtrakPriceTrackerLoaded) {
 
     // If no cards found, fall back to general price scraping
     if (prices.length === 0) {
+      console.log('Amtrak Price Tracker: No train cards with prices found, using fallback scraper');
       const generalPrices = scrapePricesFromPage();
       return { prices: generalPrices, trainPrice: null };
     }
 
+    if (targetTrainNumber && trainPrice === null) {
+      console.log(`Amtrak Price Tracker: Train #${targetTrainNumber} not found on this page`);
+    }
+
+    console.log(`Amtrak Price Tracker: Found ${prices.length} prices on page`);
     return { prices, trainPrice };
   }
 

@@ -66,7 +66,8 @@ async function loadTrips() {
   // Add delete button listeners
   tripsList.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      const tripId = e.target.dataset.tripId;
+      const button = e.currentTarget;
+      const tripId = button.dataset.tripId;
       await deleteTrip(tripId);
       await loadTrips();
     });
