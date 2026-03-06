@@ -11,12 +11,19 @@ const notificationEmailInput = document.getElementById('notification-email');
 const saveEmailBtn = document.getElementById('save-email');
 const testEmailBtn = document.getElementById('test-email');
 const refreshBtn = document.getElementById('refresh-trips');
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsSection = document.getElementById('settings-section');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTrips();
   await loadSettings();
   updateLastChecked();
+});
+
+// Settings accordion toggle
+settingsToggle.addEventListener('click', () => {
+  settingsSection.classList.toggle('collapsed');
 });
 
 // Refresh button

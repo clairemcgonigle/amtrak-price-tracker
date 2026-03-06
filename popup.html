@@ -68,35 +68,42 @@
       <div id="trips-list">
         <p class="empty-state">No trips being tracked yet.</p>
       </div>
+
+      <button id="check-now" class="btn-secondary">Check Prices Now</button>
     </section>
 
     <!-- Settings -->
-    <section id="settings-section">
-      <h2>Settings</h2>
-      <div class="setting-item">
-        <label for="check-interval">Check prices every</label>
-        <select id="check-interval">
-          <option value="1">1 hour</option>
-          <option value="4" selected>4 hours</option>
-          <option value="8">8 hours</option>
-          <option value="24">24 hours</option>
-        </select>
+    <section id="settings-section" class="accordion collapsed">
+      <div class="accordion-header" id="settings-toggle">
+        <h2>Settings</h2>
+        <span class="accordion-arrow">▼</span>
       </div>
-
-      <div class="setting-group">
-        <div class="setting-item">
-          <label for="email-notifications">Email notifications</label>
-          <input type="checkbox" id="email-notifications">
+      <div class="accordion-content">
+        <div class="setting-group">
+          <div class="setting-item">
+            <label for="check-interval">Check prices every</label>
+            <select id="check-interval">
+              <option value="1">1 hour</option>
+              <option value="4" selected>4 hours</option>
+              <option value="8">8 hours</option>
+              <option value="24">24 hours</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group" id="email-input-group" style="display: none;">
-          <label for="notification-email">Email address</label>
-          <input type="email" id="notification-email" placeholder="your@email.com">
-          <button type="button" id="save-email" class="btn-small">Save</button>
-          <button type="button" id="test-email" class="btn-small btn-outline">Test</button>
+
+        <div class="setting-group">
+          <div class="setting-item">
+            <label for="email-notifications">Email notifications</label>
+            <input type="checkbox" id="email-notifications">
+          </div>
+          <div class="form-group" id="email-input-group" style="display: none;">
+            <label for="notification-email">Email address</label>
+            <input type="email" id="notification-email" placeholder="your@email.com">
+            <button type="button" id="save-email" class="btn-small">Save</button>
+            <button type="button" id="test-email" class="btn-small btn-outline">Test</button>
+          </div>
         </div>
       </div>
-
-      <button id="check-now" class="btn-secondary">Check Prices Now</button>
     </section>
 
     <footer>

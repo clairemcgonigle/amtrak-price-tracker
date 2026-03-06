@@ -177,8 +177,12 @@ section h2 {
 
 /* Trips List */
 #trips-list {
-  max-height: 250px;
+  max-height: 300px;
   overflow-y: auto;
+}
+
+#check-now {
+  margin-top: 12px;
 }
 
 .empty-state {
@@ -326,6 +330,44 @@ section h2 {
   opacity: 1;
 }
 
+/* Accordion */
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+}
+
+.accordion-header h2 {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.accordion-arrow {
+  font-size: 14px;
+  color: #666;
+  transition: transform 0.2s;
+  padding-right: 5px;
+}
+
+.accordion.collapsed .accordion-arrow {
+  transform: rotate(-90deg);
+}
+
+.accordion-content {
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.accordion.collapsed .accordion-content {
+  max-height: 0;
+}
+
 /* Settings */
 .setting-item {
   display: flex;
@@ -334,9 +376,13 @@ section h2 {
   margin-bottom: 10px;
 }
 
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
 .setting-item label {
   font-size: 13px;
-  color: #666;
+  color: #000000;
 }
 
 .setting-item select {
@@ -391,7 +437,7 @@ footer p {
 /* Email settings */
 .setting-group {
   margin-bottom: 10px;
-  padding: 8px;
+  padding: 10px 10px 10px 10px;
   background: #f9f9f9;
   border-radius: 4px;
 }
@@ -402,7 +448,7 @@ footer p {
 
 #email-input-group input {
   width: 100%;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 #email-input-group .btn-small {
@@ -411,6 +457,7 @@ footer p {
   border-radius: 3px;
   cursor: pointer;
   margin-right: 4px;
+  margin-left: 1px;
 }
 
 .btn-small {
