@@ -225,6 +225,19 @@ async function fetchAmtrakPrice(trip) {
 
     console.log('Scrape result:', result);
 
+    // Log all trains found
+    if (result?.trains && result.trains.length > 0) {
+      console.log('=== All Trains Found ===');
+      result.trains.forEach(train => {
+        const priceList = train.prices.map(p => {
+          const fareLabel = p.fareType && p.fareType !== 'standard' ? ` (${p.fareType})` : '';
+          return p.className ? `${p.className}${fareLabel}: $${p.price}` : `$${p.price}`;
+        }).join(', ');
+        console.log(`  Train #${train.trainNumber}: ${priceList}`);
+      });
+      console.log('========================');
+    }
+
     // If we found a specific train match, use that price
     if (result?.trainPrice !== undefined && result.trainPrice !== null) {
       console.log(`Found price for train #${trip.trainNumber}: $${result.trainPrice}`);
