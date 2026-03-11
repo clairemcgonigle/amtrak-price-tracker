@@ -99,6 +99,15 @@ async function checkAllPrices() {
           trip.trainNotFound = false;
         }
 
+        // Add to price history
+        if (!trip.priceHistory) {
+          trip.priceHistory = [];
+        }
+        trip.priceHistory.push({
+          price: trip.currentPrice,
+          timestamp: new Date().toISOString()
+        });
+
         // Check if price dropped below paid price
         if (trip.currentPrice < trip.pricePaid) {
           await notifyPriceDrop(trip, trip.currentPrice);

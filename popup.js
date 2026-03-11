@@ -48,6 +48,7 @@ tripForm.addEventListener('submit', async (e) => {
     ticketClass: document.getElementById('ticket-class').value || null,
     currentPrice: null,
     lastChecked: null,
+    priceHistory: [],
     createdAt: new Date().toISOString()
   };
 
@@ -77,6 +78,33 @@ async function loadTrips() {
       const tripId = button.dataset.tripId;
       await deleteTrip(tripId);
       await loadTrips();
+    });
+  });
+
+  // Draw price history charts
+  drawAllCharts();
+
+  // Add scroll listeners for pagination dots
+  tripsList.querySelectorAll('.trip-card-wrapper').forEach(wrapper => {
+    const container = wrapper.querySelector('.trip-card-container');
+    const dots = wrapper.querySelectorAll('.pagination-dot');
+
+    container.addEventListener('scroll', () => {
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.offsetWidth;
+      const activeIndex = Math.round(scrollLeft / cardWidth);
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeIndex);
+      });
+    });
+
+    // Click on dots to navigate
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const index = parseInt(dot.dataset.index);
+        const cardWidth = container.offsetWidth;
+        container.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
+      });
     });
   });
 }
@@ -141,24 +169,52 @@ function createTripCard(trip) {
     `;
   }
 
+  // Serialize price history for the chart
+  // Backfill from currentPrice if no history exists but we have a price
+  let priceHistory = trip.priceHistory || [];
+  if (priceHistory.length === 0 && trip.currentPrice !== null) {
+    priceHistory = [{ price: trip.currentPrice, timestamp: trip.lastChecked || new Date().toISOString() }];
+  }
+  const priceHistoryData = JSON.stringify(priceHistory);
+
   return `
-    <div class="trip-card" data-trip-id="${trip.id}">
-      <div class="trip-header">
-        <span class="trip-route">${trip.origin} → ${trip.destination}</span>
-        <span class="trip-date">${formattedDate}${trainInfo}</span>
+    <div class="trip-card-wrapper">
+      <div class="trip-card-container">
+        <div class="trip-card-scroller" data-trip-id="${trip.id}">
+          <div class="trip-card trip-card-info" data-trip-id="${trip.id}">
+            <div class="trip-header">
+              <span class="trip-route">${trip.origin} → ${trip.destination}</span>
+              <span class="trip-date">${formattedDate}${trainInfo}</span>
+            </div>
+            <div class="trip-prices">
+              ${priceSection}
+            </div>
+            <div class="trip-actions">
+              <button class="btn-delete" data-trip-id="${trip.id}" title="Remove trip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="trip-card trip-card-chart">
+            <div class="chart-header">
+              <span class="chart-title">Price History</span>
+              <span class="chart-subtitle">${trip.origin} → ${trip.destination}</span>
+            </div>
+            <canvas class="price-chart" data-history='${priceHistoryData}' data-paid="${trip.pricePaid}"></canvas>
+            <div class="chart-legend">
+              <span class="legend-paid">— Paid: $${trip.pricePaid.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="trip-prices">
-        ${priceSection}
-      </div>
-      <div class="trip-actions">
-        <button class="btn-delete" data-trip-id="${trip.id}" title="Remove trip">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            <line x1="10" y1="11" x2="10" y2="17"></line>
-            <line x1="14" y1="11" x2="14" y2="17"></line>
-          </svg>
-        </button>
+      <div class="card-pagination">
+        <span class="pagination-dot active" data-index="0"></span>
+        <span class="pagination-dot" data-index="1"></span>
       </div>
     </div>
   `;
@@ -298,3 +354,128 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     updateLastChecked();
   }
 });
+
+// Draw all price history charts
+function drawAllCharts() {
+  const canvases = document.querySelectorAll('.price-chart');
+  
+  canvases.forEach(canvas => {
+    const historyStr = canvas.dataset.history || '[]';
+    const paidPrice = parseFloat(canvas.dataset.paid) || 0;
+    
+    let history;
+    try {
+      history = JSON.parse(historyStr);
+    } catch (e) {
+      history = [];
+    }
+    
+    drawPriceChart(canvas, history, paidPrice);
+    
+    // Add hover listeners for tooltips (only if not already set up)
+    if (!canvas._hoverSetup) {
+      setupChartHover(canvas);
+      canvas._hoverSetup = true;
+    }
+  });
+}
+// Draw a single price history chart
+function drawPriceChart(canvas, history, paidPrice) {
+  const ctx = canvas.getContext('2d');
+  const width = canvas.offsetWidth || 300;
+  const height = canvas.offsetHeight || 80;
+  
+  // Set canvas resolution for retina
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+  
+  // If no history, show placeholder
+  if (!history || history.length === 0) {
+    ctx.fillStyle = '#999';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No price data yet', width / 2, height / 2);
+    return;
+  }
+  
+  const prices = history.map(h => h.price);
+  const minPrice = Math.min(...prices, paidPrice) * 0.95;
+  const maxPrice = Math.max(...prices, paidPrice) * 1.05;
+  const priceRange = maxPrice - minPrice || 1;
+  
+  const padding = { top: 10, right: 10, bottom: 20, left: 10 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  
+  // Helper to convert price to Y coordinate
+  const priceToY = (price) => {
+    return padding.top + chartHeight - ((price - minPrice) / priceRange) * chartHeight;
+  };
+  
+  // Draw paid price line (dashed)
+  ctx.beginPath();
+  ctx.strokeStyle = '#1a5276';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  const paidY = priceToY(paidPrice);
+  ctx.moveTo(padding.left, paidY);
+  ctx.lineTo(width - padding.right, paidY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Draw price line
+  ctx.beginPath();
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 1;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  
+  prices.forEach((price, i) => {
+    const x = padding.left + (i / (prices.length - 1 || 1)) * chartWidth;
+    const y = priceToY(price);
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+  
+  prices.forEach((price, i) => {
+    const x = padding.left + (i / (prices.length - 1 || 1)) * chartWidth;
+    const y = priceToY(price);
+    
+    
+    ctx.beginPath();
+    ctx.fillStyle = price < paidPrice ? '#27ae60' : '#e74c3c';
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Draw current price label
+  const currentPrice = prices[prices.length - 1];
+  const currentY = priceToY(currentPrice);
+  
+  // Determine label position to avoid clipping and overlap with paid line
+  let yOffset = -6;  // Default: above the dot
+  
+  // If near top of chart, put label below
+  if (currentY < padding.top + 15) {
+    yOffset = 12;
+  }
+  // If label would overlap with paid price line (within 12px), adjust
+  else if (Math.abs(currentY + yOffset - paidY) < 12) {
+    // Put label on opposite side of dot from paid line
+    yOffset = currentY > paidY ? -6 : 12;
+  }
+  
+  ctx.fillStyle = '#333';
+  ctx.font = 'bold 11px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`$${currentPrice.toFixed(0)}`, width - padding.right, currentY + yOffset);
+}
