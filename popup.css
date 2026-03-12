@@ -389,6 +389,10 @@ section h2 {
   font-weight: 700;
 }
 
+.price-value.unavailable {
+  color: #fccc1c;
+}
+
 .price-drop-badge {
   background: #27ae60;
   color: white;
