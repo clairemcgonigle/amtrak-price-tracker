@@ -125,6 +125,8 @@ function createTripCard(trip) {
   let priceSection;
   const ticketClassText = "Ticket class: " + (trip.ticketClass ? trip.ticketClass.charAt(0).toUpperCase() + trip.ticketClass.slice(1) : 'Not specified');
 
+  const tripHasPassed = new Date(trip.travelDate) < new Date();
+
   if (trip.trainNotFound) {
     // Train not found - show warning message
     const formattedPriceDate = formatDate(trip.travelDate);
@@ -177,11 +179,15 @@ function createTripCard(trip) {
   }
   const priceHistoryData = JSON.stringify(priceHistory);
 
+  const passedClass = tripHasPassed ? 'trip-passed' : '';
+  const passedBadge = tripHasPassed ? '<span class="trip-passed-badge">Trip Passed</span>' : '';
+
   return `
-    <div class="trip-card-wrapper">
+    <div class="trip-card-wrapper ${passedClass}">
       <div class="trip-card-container">
         <div class="trip-card-scroller" data-trip-id="${trip.id}">
           <div class="trip-card trip-card-info" data-trip-id="${trip.id}">
+          ${passedBadge}
             <div class="trip-header">
               <span class="trip-route">${trip.origin} → ${trip.destination}</span>
               <span class="trip-date">${formattedDate}${trainInfo}</span>
