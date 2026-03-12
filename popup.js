@@ -379,6 +379,60 @@ function drawAllCharts() {
     }
   });
 }
+
+// Setup hover tooltip for a chart
+function setupChartHover(canvas) {
+  let tooltip = null;
+  
+  canvas.addEventListener('mousemove', (e) => {
+    const dots = canvas._dotData;
+    if (!dots || dots.length === 0) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Find closest dot within 15px
+    let closestDot = null;
+    let closestDist = 15;
+    
+    dots.forEach(dot => {
+      const dist = Math.sqrt((mouseX - dot.x) ** 2 + (mouseY - dot.y) ** 2);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestDot = dot;
+      }
+    });
+    
+    if (closestDot) {
+      // Create tooltip if needed
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'chart-tooltip';
+        document.body.appendChild(tooltip);
+      }
+      
+      // Format date
+      const date = new Date(closestDot.timestamp);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      
+      tooltip.innerHTML = `<strong>$${closestDot.price.toFixed(2)}</strong><br>${dateStr} ${timeStr}`;
+      tooltip.style.display = 'block';
+      tooltip.style.left = `${e.clientX + 10}px`;
+      tooltip.style.top = `${e.clientY - 30}px`;
+    } else if (tooltip) {
+      tooltip.style.display = 'none';
+    }
+  });
+  
+  canvas.addEventListener('mouseleave', () => {
+    if (tooltip) {
+      tooltip.style.display = 'none';
+    }
+  });
+}
+
 // Draw a single price history chart
 function drawPriceChart(canvas, history, paidPrice) {
   const ctx = canvas.getContext('2d');
@@ -447,16 +501,30 @@ function drawPriceChart(canvas, history, paidPrice) {
   });
   ctx.stroke();
   
+  // Draw dots at each data point
+  const dotData = [];
+  
   prices.forEach((price, i) => {
     const x = padding.left + (i / (prices.length - 1 || 1)) * chartWidth;
     const y = priceToY(price);
     
+    // Store dot position for hover detection
+    dotData.push({
+      x,
+      y,
+      price,
+      timestamp: history[i]?.timestamp || null
+    });
     
     ctx.beginPath();
     ctx.fillStyle = price < paidPrice ? '#27ae60' : '#e74c3c';
     ctx.arc(x, y, 3, 0, Math.PI * 2);
     ctx.fill();
   });
+  
+  // Store dot data on canvas for hover events
+  canvas._dotData = dotData;
+  
   // Draw current price label
   const currentPrice = prices[prices.length - 1];
   const currentY = priceToY(currentPrice);
