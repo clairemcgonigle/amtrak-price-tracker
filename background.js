@@ -44,6 +44,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Log messages from content script to service worker
+  if (message.action === 'log') {
+    console.log(message.message);
+    return;
+  }
+
   if (message.action === 'checkPrices') {
     checkAllPrices().then(() => {
       sendResponse({ success: true });

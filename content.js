@@ -7,14 +7,28 @@
  * 3. Extract booking confirmation details
  */
 
-// Prevent double execution
+// Helper to send logs to service worker (persists across page navigation)
+function workerLog(...args) {
+  const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  console.log('[Content]', ...args);
+  try {
+    chrome.runtime.sendMessage({ action: 'log', message: `[Content] ${message}` });
+  } catch (e) {
+  }
+}
+
+// Prevent multiple listener registrations
+// Use a unique key per page context to handle SPA routing properly
 if (window._amtrakPriceTrackerLoaded) {
-  console.log('Amtrak Price Tracker: Already loaded, skipping');
+  workerLog('Already loaded, skipping listener registration');
 } else {
   window._amtrakPriceTrackerLoaded = true;
+  workerLog('Initializing content script on', window.location.href);
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'log') return;
+    workerLog('Received message:', message.action);
     if (message.action === 'scrapePrices') {
       scrapePricesWithPagination(message.trainNumber, message.ticketClass)
         .then(result => sendResponse(result))
@@ -47,7 +61,8 @@ if (window._amtrakPriceTrackerLoaded) {
    */
   async function fillAndSubmitSearchForm(trip) {
     try {
-      // Wait for the SPA to fully load
+      workerLog(' fillAndSubmitSearchForm called with:', JSON.stringify(trip));
+      
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Clear any existing form values first
@@ -69,6 +84,7 @@ if (window._amtrakPriceTrackerLoaded) {
       }
 
       originInput.focus();
+      workerLog(' Setting origin to:', trip.origin);
 
       const originSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       originSetter.call(originInput, trip.origin);
@@ -90,11 +106,12 @@ if (window._amtrakPriceTrackerLoaded) {
       // Fill destination using its specific ID
       const destInput = document.querySelector('#am-form-field-control-2');
       if (!destInput) {
-        console.error('Could not find destination input #am-form-field-control-2');
+        workerLog('ERROR: Could not find destination input #am-form-field-control-2');
         return { success: false, error: 'Could not find destination input' };
       }
 
       destInput.focus();
+      workerLog(' Setting destination to:', trip.destination);
 
       const destSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       destSetter.call(destInput, trip.destination);
@@ -115,6 +132,8 @@ if (window._amtrakPriceTrackerLoaded) {
       // Find and fill date input
       const dateInput = document.querySelector('#am-form-field-control-4');
       if (dateInput) {
+        workerLog(' Found date input, attempting to fill date:', trip.travelDate);
+        workerLog(' Full trip data for verification:', trip.origin, '->', trip.destination, 'on', trip.travelDate);
         const [year, month, day] = trip.travelDate.split('-');
         const formattedDate = `${month}/${day}/${year}`;
 
@@ -154,9 +173,11 @@ if (window._amtrakPriceTrackerLoaded) {
         }
 
         if (calendarBtn) {
+          workerLog(' Found calendar button, clicking it');
           calendarBtn.click();
         } else {
           // Try clicking outside the calendar to close it
+          workerLog(' No calendar button found, clicking outside to close');
           document.body.click();
           // Also try Escape
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
@@ -171,11 +192,21 @@ if (window._amtrakPriceTrackerLoaded) {
           workerLog('ERROR: WARNING - Date field is empty!');
         }
       } else {
-        console.error('Could not find date input');
+        workerLog('ERROR: Could not find date input');
+        return { success: false, error: 'Could not find date input field' };
       }
 
       // Wait longer for Angular form validation to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Verify all form values before submitting
+      const originValue = document.querySelector('#am-form-field-control-0')?.value || '';
+      const destValue = document.querySelector('#am-form-field-control-2')?.value || '';
+      const dateValue = dateInput?.value || '';
+      workerLog(' Form values before submit:');
+      workerLog('  Origin:', originValue, '(expected:', trip.origin, ')');
+      workerLog('  Destination:', destValue, '(expected:', trip.destination, ')');
+      workerLog('  Date:', dateValue, '(expected:', trip.travelDate, ')');
 
       // Find search button - look for "Find Trains" button
       let searchBtn = null;
@@ -194,7 +225,7 @@ if (window._amtrakPriceTrackerLoaded) {
       }
 
       if (!searchBtn) {
-        console.error('Could not find search button');
+        workerLog('ERROR: Could not find search button');
         return { success: false, error: 'Could not find search button' };
       }
 
@@ -202,21 +233,24 @@ if (window._amtrakPriceTrackerLoaded) {
       const isDisabled = searchBtn.disabled || searchBtn.getAttribute('aria-disabled') === 'true';
 
       if (isDisabled) {
+        workerLog('Search button was disabled, enabling it');
         searchBtn.disabled = false;
         searchBtn.removeAttribute('disabled');
         searchBtn.setAttribute('aria-disabled', 'false');
         searchBtn.classList.remove('disabled');
       }
 
+      workerLog('Clicking search button...');
       searchBtn.click();
 
       // Also try dispatching a click event directly
       searchBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
+      workerLog('Search button clicked, form submitted');
       return { success: true };
 
     } catch (error) {
-      console.error('Error filling search form:', error);
+      workerLog('ERROR: Error filling search form:', error.message);
       return { success: false, error: error.message };
     }
   }
@@ -226,9 +260,9 @@ if (window._amtrakPriceTrackerLoaded) {
    * Pages through results to find a specific train number
    */
   async function scrapePricesWithPagination(targetTrainNumber, targetClass) {
-    console.log('Amtrak Price Tracker: Scraping with pagination...');
-    console.log('Looking for train number:', targetTrainNumber || 'any');
-    console.log('Looking for class:', targetClass || 'any (lowest)');
+    workerLog(' Scraping with pagination...');
+    workerLog('Looking for train number:', targetTrainNumber || 'any');
+    workerLog('Looking for class:', targetClass || 'any (lowest)');
 
     const maxPages = 5; // Safety limit
     let allPrices = [];
@@ -245,7 +279,7 @@ if (window._amtrakPriceTrackerLoaded) {
 
       // If we found the target train, return immediately
       if (pageResult.trainPrice !== null) {
-        console.log(`Found target train #${targetTrainNumber} with price $${pageResult.trainPrice}`);
+        workerLog(`Found target train #${targetTrainNumber} with price $${pageResult.trainPrice}`);
         return { prices: allPrices, trains: allTrains, trainPrice: pageResult.trainPrice };
       }
 
@@ -336,7 +370,7 @@ if (window._amtrakPriceTrackerLoaded) {
       cards = document.querySelectorAll('[data-testid*="journey-card"], [class*="journey-card"]');
     }
     
-    console.log(`Amtrak Price Tracker: Found ${cards.length} am-journey-card elements`);
+    workerLog(`Found ${cards.length} am-journey-card elements`);
 
     cards.forEach((card, index) => {
       // Extract train number from .train-name element
@@ -364,9 +398,9 @@ if (window._amtrakPriceTrackerLoaded) {
       
       // Debug: if this might be our target train, log more details
       if (cardTrainNumber === targetTrainNumber) {
-        console.log(`  FOUND TARGET - Card ${index + 1}: Train #${cardTrainNumber}`);
+        workerLog(`  FOUND TARGET - Card ${index + 1}: Train #${cardTrainNumber}`);
       } else if (cardTrainNumber) {
-        console.log(`  Card ${index + 1}: Train #${cardTrainNumber}`);
+        workerLog(`  Card ${index + 1}: Train #${cardTrainNumber}`);
       }
 
       // Look for class-fare buttons within this card
@@ -375,7 +409,7 @@ if (window._amtrakPriceTrackerLoaded) {
       
       // Debug: log button count for target train
       if (cardTrainNumber === targetTrainNumber) {
-        console.log(`  Scanning ${fareButtons.length} .class-fare buttons for Train #${cardTrainNumber}:`);
+        workerLog(`  Scanning ${fareButtons.length} .class-fare buttons for Train #${cardTrainNumber}:`);
       }
       
       fareButtons.forEach(btn => {
@@ -399,7 +433,7 @@ if (window._amtrakPriceTrackerLoaded) {
         if (price && price >= 20 && price <= 2000 && !isUnavailable) {
           // Debug: log for target train
           if (cardTrainNumber === targetTrainNumber) {
-            console.log(`    Found: ${classTitle} $${price}`);
+            workerLog(`    Found: ${classTitle} $${price}`);
           }
           
           // Determine normalized class name
@@ -450,7 +484,7 @@ if (window._amtrakPriceTrackerLoaded) {
         // Add train details to trains array
         if (cardTrainNumber) {
           // Log detailed info for debugging
-          console.log(`    Train #${cardTrainNumber} fares:`, classPrices.map(cp => 
+          workerLog(`    Train #${cardTrainNumber} fares:`, classPrices.map(cp => 
             `${cp.className || 'unknown'}${cp.fareType !== 'standard' ? ` (${cp.fareType})` : ''}: $${cp.price}`
           ).join(', '));
           
@@ -467,18 +501,18 @@ if (window._amtrakPriceTrackerLoaded) {
             const classMatch = classPrices.find(cp => cp.className === targetClassLower);
             
             if (classMatch) {
-              console.log(`Match! Train #${cardTrainNumber} ${targetClassLower} price: $${classMatch.price}`);
+              workerLog(`Match! Train #${cardTrainNumber} ${targetClassLower} price: $${classMatch.price}`);
               trainPrice = classMatch.price;
             } else {
               // Class not found on this train, use lowest as fallback
               const lowestPrice = Math.min(...classPrices.map(cp => cp.price));
-              console.log(`Train #${cardTrainNumber} found but ${targetClassLower} class not available. Lowest: $${lowestPrice}`);
+              workerLog(`Train #${cardTrainNumber} found but ${targetClassLower} class not available. Lowest: $${lowestPrice}`);
               trainPrice = lowestPrice;
             }
           } else {
             // No target class specified, use lowest price
             trainPrice = Math.min(...classPrices.map(cp => cp.price));
-            console.log(`Match! Train #${cardTrainNumber} lowest price: $${trainPrice}`);
+            workerLog(`Match! Train #${cardTrainNumber} lowest price: $${trainPrice}`);
           }
         }
       } else {
@@ -491,7 +525,7 @@ if (window._amtrakPriceTrackerLoaded) {
 
           // Check if this is our target train
           if (targetTrainNumber && cardTrainNumber === targetTrainNumber) {
-            console.log(`Match! Train #${cardTrainNumber} price: $${cardPrice}`);
+            workerLog(`Match! Train #${cardTrainNumber} price: $${cardPrice}`);
             trainPrice = cardPrice;
           }
         }
@@ -500,16 +534,16 @@ if (window._amtrakPriceTrackerLoaded) {
 
     // If no cards found, fall back to general price scraping
     if (prices.length === 0) {
-      console.log('Amtrak Price Tracker: No train cards with prices found, using fallback scraper');
+      workerLog(' No train cards with prices found, using fallback scraper');
       const generalPrices = scrapePricesFromPage();
       return { prices: generalPrices, trainPrice: null };
     }
 
     if (targetTrainNumber && trainPrice === null) {
-      console.log(`Amtrak Price Tracker: Train #${targetTrainNumber} not found on this page`);
+      workerLog(`Train #${targetTrainNumber} not found on this page`);
     }
 
-    console.log(`Amtrak Price Tracker: Found ${prices.length} prices on page, ${trains.length} trains identified`);
+    workerLog(`Found ${prices.length} prices on page, ${trains.length} trains identified`);
     return { prices, trains, trainPrice };
   }
 
@@ -570,7 +604,7 @@ if (window._amtrakPriceTrackerLoaded) {
       const uniquePrices = [...new Set(prices)];
       return uniquePrices;
     } catch (error) {
-      console.error('Amtrak Price Tracker: Error scraping prices', error);
+      workerLog('ERROR: Error scraping prices', error.message);
       return [];
     }
   }
