@@ -29,6 +29,16 @@ if (window._amtrakPriceTrackerLoaded) {
       return true; // Keep channel open for async response
     }
 
+    if (message.action === 'checkResultsReady') {
+      // Check if train results are visible on the page
+      const selectTrain = document.querySelector('.select-train');
+      const journeyCards = document.querySelectorAll('am-journey-card');
+      const isReady = !!(selectTrain || journeyCards.length > 0);
+      workerLog('Results ready check:', isReady, '(select-train:', !!selectTrain, ', journey-cards:', journeyCards.length, ')');
+      sendResponse({ ready: isReady });
+      return true;
+    }
+
     return true;
   });
 
@@ -39,6 +49,18 @@ if (window._amtrakPriceTrackerLoaded) {
     try {
       // Wait for the SPA to fully load
       await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Clear any existing form values first
+      const allInputs = document.querySelectorAll('#am-form-field-control-0, #am-form-field-control-2, #am-form-field-control-4');
+      for (const input of allInputs) {
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          setter.call(input, '');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Fill origin using its specific ID
       const originInput = document.querySelector('#am-form-field-control-0');
@@ -141,6 +163,13 @@ if (window._amtrakPriceTrackerLoaded) {
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify date was set
+        const dateValue = dateInput.value;
+        workerLog(' Date input value after setting:', dateValue);
+        if (!dateValue || dateValue.trim() === '') {
+          workerLog('ERROR: WARNING - Date field is empty!');
+        }
       } else {
         console.error('Could not find date input');
       }
