@@ -62,7 +62,7 @@ if (window._amtrakPriceTrackerLoaded) {
   async function fillAndSubmitSearchForm(trip) {
     try {
       workerLog(' fillAndSubmitSearchForm called with:', JSON.stringify(trip));
-      
+
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Clear any existing form values first
@@ -184,7 +184,7 @@ if (window._amtrakPriceTrackerLoaded) {
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // Verify date was set
         const dateValue = dateInput.value;
         workerLog(' Date input value after setting:', dateValue);
@@ -356,7 +356,7 @@ if (window._amtrakPriceTrackerLoaded) {
     const prices = [];
     const trains = [];  // Array to store train details
     let trainPrice = null;
-    
+
     // Normalize target train number to string for comparison
     const targetStr = targetTrainNumber ? String(targetTrainNumber) : null;
     // Normalize target class to lowercase for comparison
@@ -364,19 +364,19 @@ if (window._amtrakPriceTrackerLoaded) {
 
     // Look for am-journey-card elements (Amtrak's Angular component)
     let cards = document.querySelectorAll('am-journey-card');
-    
+
     // Fallback to broader selectors if no journey cards found
     if (cards.length === 0) {
       cards = document.querySelectorAll('[data-testid*="journey-card"], [class*="journey-card"]');
     }
-    
+
     workerLog(`Found ${cards.length} am-journey-card elements`);
 
     cards.forEach((card, index) => {
       // Extract train number from .train-name element
       const trainNameEl = card.querySelector('.train-name');
       let cardTrainNumber = null;
-      
+
       if (trainNameEl) {
         // Get the first span which contains the train number
         const trainNumberSpan = trainNameEl.querySelector('span');
@@ -388,14 +388,14 @@ if (window._amtrakPriceTrackerLoaded) {
           }
         }
       }
-      
+
       // Fallback: try regex on full card text
       if (!cardTrainNumber) {
         const cardText = card.textContent || '';
         const trainMatch = cardText.match(/(?:Train|#)\s*(\d{1,4})\b/i);
         cardTrainNumber = trainMatch ? trainMatch[1] : null;
       }
-      
+
       // Debug: if this might be our target train, log more details
       if (cardTrainNumber === targetTrainNumber) {
         workerLog(`  FOUND TARGET - Card ${index + 1}: Train #${cardTrainNumber}`);
@@ -406,42 +406,42 @@ if (window._amtrakPriceTrackerLoaded) {
       // Look for class-fare buttons within this card
       const fareButtons = card.querySelectorAll('.class-fare');
       let classPricesMap = new Map(); // Use Map to dedupe by class+price
-      
+
       // Debug: log button count for target train
       if (cardTrainNumber === targetTrainNumber) {
         workerLog(`  Scanning ${fareButtons.length} .class-fare buttons for Train #${cardTrainNumber}:`);
       }
-      
+
       fareButtons.forEach(btn => {
         // Get class title (Coach, Business, First)
         const classTitleEl = btn.querySelector('.class-title');
         const classTitle = classTitleEl ? classTitleEl.textContent.trim().toLowerCase() : null;
-        
+
         // Get price from .price-tag element
         const priceTagEl = btn.querySelector('.price-tag');
         let price = null;
-        
+
         if (priceTagEl) {
           const priceText = priceTagEl.textContent.trim().replace(',', '');
           price = parseFloat(priceText);
         }
-        
+
         // Check for "Not Offered" or unavailable
-        const isUnavailable = btn.classList.contains('class-unavailable') || 
-                              btn.querySelector('.unavailable-text, .not-available-text');
-        
+        const isUnavailable = btn.classList.contains('class-unavailable') ||
+          btn.querySelector('.unavailable-text, .not-available-text');
+
         if (price && price >= 20 && price <= 2000 && !isUnavailable) {
           // Debug: log for target train
           if (cardTrainNumber === targetTrainNumber) {
             workerLog(`    Found: ${classTitle} $${price}`);
           }
-          
+
           // Determine normalized class name
           let className = null;
           if (classTitle?.includes('coach')) className = 'coach';
           else if (classTitle?.includes('business')) className = 'business';
           else if (classTitle?.includes('first')) className = 'first';
-          
+
           // Use class+price as key to deduplicate
           const key = `${className}-${price}`;
           if (!classPricesMap.has(key)) {
@@ -449,13 +449,13 @@ if (window._amtrakPriceTrackerLoaded) {
           }
         }
       });
-      
+
       // Fallback: try the old method if no prices found with new selectors
       if (classPricesMap.size === 0) {
         const classButtons = card.querySelectorAll('button, [class*="fare"], [class*="price"]');
         classButtons.forEach(btn => {
           const btnText = (btn.textContent || '').toLowerCase();
-          const priceMatch = btnText.match(/\$\s*([\d,]+(?:\.\d{2})?)/); 
+          const priceMatch = btnText.match(/\$\s*([\d,]+(?:\.\d{2})?)/);
           if (priceMatch) {
             const price = parseFloat(priceMatch[1].replace(',', ''));
             if (price >= 20 && price <= 2000) {
@@ -463,7 +463,7 @@ if (window._amtrakPriceTrackerLoaded) {
               if (btnText.includes('coach')) className = 'coach';
               else if (btnText.includes('business')) className = 'business';
               else if (btnText.includes('first')) className = 'first';
-              
+
               const key = `${className}-${price}`;
               if (!classPricesMap.has(key)) {
                 classPricesMap.set(key, { price, className, fareType: 'standard' });
@@ -480,14 +480,14 @@ if (window._amtrakPriceTrackerLoaded) {
       if (classPrices.length > 0) {
         // Add all prices to the general list
         classPrices.forEach(cp => prices.push(cp.price));
-        
+
         // Add train details to trains array
         if (cardTrainNumber) {
           // Log detailed info for debugging
-          workerLog(`    Train #${cardTrainNumber} fares:`, classPrices.map(cp => 
+          workerLog(`    Train #${cardTrainNumber} fares:`, classPrices.map(cp =>
             `${cp.className || 'unknown'}${cp.fareType !== 'standard' ? ` (${cp.fareType})` : ''}: $${cp.price}`
           ).join(', '));
-          
+
           trains.push({
             trainNumber: cardTrainNumber,
             prices: classPrices
@@ -499,7 +499,7 @@ if (window._amtrakPriceTrackerLoaded) {
           // Look for the target class price
           if (targetClassLower) {
             const classMatch = classPrices.find(cp => cp.className === targetClassLower);
-            
+
             if (classMatch) {
               workerLog(`Match! Train #${cardTrainNumber} ${targetClassLower} price: $${classMatch.price}`);
               trainPrice = classMatch.price;
@@ -517,7 +517,7 @@ if (window._amtrakPriceTrackerLoaded) {
         }
       } else {
         // Fallback: extract any price from the card text
-        const priceMatch = cardText.match(/\$\s*([\d,]+(?:\.\d{2})?)/); 
+        const priceMatch = cardText.match(/\$\s*([\d,]+(?:\.\d{2})?)/);
         const cardPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : null;
 
         if (cardPrice && cardPrice >= 20 && cardPrice <= 2000) {

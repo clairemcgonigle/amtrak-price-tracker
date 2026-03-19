@@ -43,7 +43,7 @@ export async function sendPriceDropEmail(trip, currentPrice, toEmail) {
 
   const savings = trip.pricePaid - currentPrice;
   const bookingUrl = buildBookingUrl(trip);
-  
+
   const templateParams = {
     to_email: toEmail,
     route: `${trip.origin} → ${trip.destination}`,
@@ -94,7 +94,7 @@ export async function sendTestEmail(toEmail) {
     travelDate: '2026-03-15',
     pricePaid: 89.00
   };
-  
+
   return sendPriceDropEmail(testTrip, 72.00, toEmail);
 }
 
@@ -111,8 +111,8 @@ function buildBookingUrl(trip) {
 
 function formatDate(dateString) {
   const date = new Date(dateString + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
     day: 'numeric',
     year: 'numeric'
   });

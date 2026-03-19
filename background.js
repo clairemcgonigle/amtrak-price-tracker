@@ -93,65 +93,65 @@ async function checkAllPrices() {
     console.log(`Checking prices for ${trips.length} trips`);
 
     for (const trip of trips) {
-    // Skip trips that have already passed
-    if (new Date(trip.travelDate) < new Date()) {
-      console.log(`Skipping past trip: ${trip.origin} → ${trip.destination}`);
-      continue;
-    }
-
-    try {
-      const priceResult = await fetchAmtrakPrice(trip);
-
-      // Always update lastChecked so we know a check was attempted
-      trip.lastChecked = new Date().toISOString();
-
-      if (priceResult !== null) {
-        const wasTrainNotFound = trip.trainNotFound;
-
-        // Handle both old format (just a number) and new format (object)
-        if (typeof priceResult === 'object') {
-          trip.currentPrice = priceResult.price;
-          trip.trainNotFound = !priceResult.trainFound && trip.trainNumber;
-        } else {
-          trip.currentPrice = priceResult;
-          trip.trainNotFound = false;
-        }
-
-        // Add to price history
-        if (!trip.priceHistory) {
-          trip.priceHistory = [];
-        }
-        trip.priceHistory.push({
-          price: trip.currentPrice,
-          timestamp: new Date().toISOString()
-        });
-
-        // Check if price dropped below paid price
-        if (trip.currentPrice < trip.pricePaid) {
-          await notifyPriceDrop(trip, trip.currentPrice);
-        }
-
-        // Notify if train was not found (only first time)
-        if (trip.trainNotFound && !wasTrainNotFound) {
-          await notifyTrainNotFound(trip);
-        }
-
-        console.log(`${trip.origin}→${trip.destination}: $${trip.currentPrice} (paid: $${trip.pricePaid})${trip.trainNotFound ? ' [train not found]' : ''}`);
-      } else {
-        console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
+      // Skip trips that have already passed
+      if (new Date(trip.travelDate) < new Date()) {
+        console.log(`Skipping past trip: ${trip.origin} → ${trip.destination}`);
+        continue;
       }
 
-      await updateTrip(trip);
+      try {
+        const priceResult = await fetchAmtrakPrice(trip);
 
-      console.log('Waiting 5 seconds before next trip...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    } catch (error) {
-      console.error(`Error checking price for trip ${trip.id}:`, error);
-      // Still update lastChecked on error so UI shows "Unavailable" not "Checking..."
-      trip.lastChecked = new Date().toISOString();
-      await updateTrip(trip);
+        // Always update lastChecked so we know a check was attempted
+        trip.lastChecked = new Date().toISOString();
+
+        if (priceResult !== null) {
+          const wasTrainNotFound = trip.trainNotFound;
+
+          // Handle both old format (just a number) and new format (object)
+          if (typeof priceResult === 'object') {
+            trip.currentPrice = priceResult.price;
+            trip.trainNotFound = !priceResult.trainFound && trip.trainNumber;
+          } else {
+            trip.currentPrice = priceResult;
+            trip.trainNotFound = false;
+          }
+
+          // Add to price history
+          if (!trip.priceHistory) {
+            trip.priceHistory = [];
+          }
+          trip.priceHistory.push({
+            price: trip.currentPrice,
+            timestamp: new Date().toISOString()
+          });
+
+          // Check if price dropped below paid price
+          if (trip.currentPrice < trip.pricePaid) {
+            await notifyPriceDrop(trip, trip.currentPrice);
+          }
+
+          // Notify if train was not found (only first time)
+          if (trip.trainNotFound && !wasTrainNotFound) {
+            await notifyTrainNotFound(trip);
+          }
+
+          console.log(`${trip.origin}→${trip.destination}: $${trip.currentPrice} (paid: $${trip.pricePaid})${trip.trainNotFound ? ' [train not found]' : ''}`);
+        } else {
+          console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
+        }
+
+        await updateTrip(trip);
+
+        console.log('Waiting 5 seconds before next trip...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } catch (error) {
+        console.error(`Error checking price for trip ${trip.id}:`, error);
+        // Still update lastChecked on error so UI shows "Unavailable" not "Checking..."
+        trip.lastChecked = new Date().toISOString();
+        await updateTrip(trip);
+      }
     }
-  }
 
     // Update last checked timestamp
     await saveSettings({ lastChecked: new Date().toISOString() });
@@ -216,9 +216,9 @@ async function fetchAmtrakPrice(trip) {
     } catch (err) {
       // Check if page navigated (which would indicate form was submitted)
       const currentTab = await chrome.tabs.get(tab.id);
-      const hasNavigated = !currentTab.url?.endsWith('amtrak.com/') && 
-                           currentTab.url !== 'https://www.amtrak.com/';
-      
+      const hasNavigated = !currentTab.url?.endsWith('amtrak.com/') &&
+        currentTab.url !== 'https://www.amtrak.com/';
+
       if (hasNavigated) {
         console.log('Form submitted (page navigated to:', currentTab.url, ')');
         fillResult = { success: true };
@@ -239,11 +239,11 @@ async function fetchAmtrakPrice(trip) {
 
     // Verify we're on a results page before scraping
     const currentTab = await chrome.tabs.get(tab.id);
-    const isResultsPage = currentTab.url?.includes('/tickets/departure') || 
-                          currentTab.url?.includes('/train-routes') ||
-                          currentTab.url?.includes('/search') ||
-                          currentTab.url?.includes('/book');
-    
+    const isResultsPage = currentTab.url?.includes('/tickets/departure') ||
+      currentTab.url?.includes('/train-routes') ||
+      currentTab.url?.includes('/search') ||
+      currentTab.url?.includes('/book');
+
     if (!isResultsPage) {
       console.log('Not on results page, URL:', currentTab.url);
       return null;

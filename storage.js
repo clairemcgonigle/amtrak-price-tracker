@@ -41,7 +41,7 @@ export async function saveTrip(trip) {
 export async function updateTrip(updatedTrip) {
   const trips = await getTrips();
   const index = trips.findIndex(t => t.id === updatedTrip.id);
-  
+
   if (index !== -1) {
     trips[index] = updatedTrip;
     await chrome.storage.local.set({ [STORAGE_KEYS.TRIPS]: trips });
