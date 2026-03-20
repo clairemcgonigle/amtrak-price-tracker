@@ -93,8 +93,10 @@ async function checkAllPrices() {
     console.log(`Checking prices for ${trips.length} trips`);
 
     for (const trip of trips) {
-      // Skip trips that have already passed
-      if (new Date(trip.travelDate) < new Date()) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (new Date(trip.travelDate + 'T00:00:00') < today) {
         console.log(`Skipping past trip: ${trip.origin} → ${trip.destination}`);
         continue;
       }

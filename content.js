@@ -1,10 +1,8 @@
 /**
  * Content script for Amtrak Price Tracker
  * 
- * This script runs on Amtrak.com pages and can:
- * 1. Make API calls with proper session cookies
- * 2. Scrape price information from search results
- * 3. Extract booking confirmation details
+ * This script runs on Amtrak.com pages and can
+ * scrape price information from search results
  */
 
 // Helper to send logs to service worker (persists across page navigation)

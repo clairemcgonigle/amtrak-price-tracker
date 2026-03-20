@@ -114,9 +114,12 @@ function createTripCard(trip) {
   const priceDiff = trip.currentPrice !== null ? trip.pricePaid - trip.currentPrice : null;
   const isPriceLower = priceDiff !== null && priceDiff > 0;
   const isPriceHigher = priceDiff !== null && priceDiff < 0;
-  const tripHasPassed = new Date(trip.travelDate) < new Date();
 
-  let currentPriceClass = isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : (tripHasPassed ? 'unavailable' : 'current'));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tripHasPassed = new Date(trip.travelDate + 'T00:00:00') < today;
+
+  let currentPriceClass = tripHasPassed ? 'unavailable' : (isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : 'current'));
 
   const formattedDate = formatDate(trip.travelDate);
   const trainWarning = trip.trainNotFound ? ' ⚠️' : '';
@@ -143,7 +146,8 @@ function createTripCard(trip) {
   } else {
     // Train found or no train specified
     let currentPriceDisplay;
-    if (trip.travelDate && new Date(trip.travelDate) < new Date()) {
+    if (tripHasPassed) {
+      currentPriceClass = 'unavailable';
       currentPriceDisplay = 'Trip Passed';
     } else if (trip.currentPrice !== null) {
       currentPriceDisplay = `$${trip.currentPrice.toFixed(2)}`;
