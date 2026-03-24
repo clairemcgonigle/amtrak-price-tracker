@@ -76,8 +76,9 @@ async function loadTrips() {
     btn.addEventListener('click', async (e) => {
       const button = e.currentTarget;
       const tripId = button.dataset.tripId;
-      await deleteTrip(tripId);
-      await loadTrips();
+      const origin = button.dataset.origin;
+      const destination = button.dataset.destination;
+      showDeleteConfirmation(tripId, origin, destination);
     });
   });
 
@@ -202,7 +203,7 @@ function createTripCard(trip) {
               ${priceSection}
             </div>
             <div class="trip-actions">
-              <button class="btn-delete" data-trip-id="${trip.id}" title="Remove trip">
+              <button class="btn-delete" data-trip-id="${trip.id}" data-origin="${trip.origin}" data-destination="${trip.destination}" title="Remove trip">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -311,6 +312,41 @@ function showEmailStatus(message, type) {
   statusEl.className = `email-status ${type}`;
   setTimeout(() => { statusEl.textContent = ''; }, 3000);
 }
+
+// Delete confirmation modal
+const deleteModal = document.getElementById('delete-modal');
+const modalMessage = deleteModal.querySelector('.modal-message');
+const modalCancel = document.getElementById('modal-cancel');
+const modalConfirm = document.getElementById('modal-confirm');
+let pendingDeleteTripId = null;
+
+function showDeleteConfirmation(tripId, origin, destination) {
+  pendingDeleteTripId = tripId;
+  modalMessage.textContent = `Remove ${origin} → ${destination} trip?`;
+  deleteModal.style.display = 'flex';
+}
+
+function hideDeleteConfirmation() {
+  deleteModal.style.display = 'none';
+  pendingDeleteTripId = null;
+}
+
+modalCancel.addEventListener('click', hideDeleteConfirmation);
+
+modalConfirm.addEventListener('click', async () => {
+  if (pendingDeleteTripId) {
+    await deleteTrip(pendingDeleteTripId);
+    hideDeleteConfirmation();
+    await loadTrips();
+  }
+});
+
+// Close modal when clicking overlay
+deleteModal.addEventListener('click', (e) => {
+  if (e.target === deleteModal) {
+    hideDeleteConfirmation();
+  }
+});
 
 // Check prices now button
 checkNowBtn.addEventListener('click', async () => {
