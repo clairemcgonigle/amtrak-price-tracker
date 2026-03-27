@@ -267,9 +267,19 @@ if (window._amtrakPriceTrackerLoaded) {
     let allTrains = [];
     let trainPrice = null;
 
+    let previousDomSignature = null;
+
     for (let page = 0; page < maxPages; page++) {
       // Scrape current page for train cards with train numbers
       const pageResult = scrapeTrainCards(targetTrainNumber, targetClass);
+      const currentDomSignature = getCurrentResultsSignature();
+
+      // If we keep seeing the same page signature, pagination is not advancing.
+      if (page > 0 && previousDomSignature && currentDomSignature === previousDomSignature) {
+        workerLog('Pagination did not advance (same results signature), stopping');
+        break;
+      }
+      previousDomSignature = currentDomSignature;
 
       // Collect all prices and trains
       allPrices = allPrices.concat(pageResult.prices);
@@ -289,11 +299,24 @@ if (window._amtrakPriceTrackerLoaded) {
       // Look for "next" or "later" button to see more trains
       const nextButton = findNextPageButton();
       if (!nextButton) {
+        workerLog('No next-page button found, stopping pagination');
         break;
       }
 
-      nextButton.click();
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const clicked = clickButtonSafely(nextButton);
+      if (!clicked) {
+        workerLog('Could not click next-page button, stopping pagination');
+        break;
+      }
+
+      const changed = await waitForResultsChange(currentDomSignature, 8000);
+      if (!changed) {
+        workerLog('Clicked next-page button but results did not change, stopping pagination');
+        break;
+      }
+
+      const activePage = getActiveResultsPage();
+      workerLog(`Moved to next results page (${activePage || page + 2})`);
     }
 
     // Deduplicate prices
@@ -306,44 +329,99 @@ if (window._amtrakPriceTrackerLoaded) {
    * Find the button to load more/next results
    */
   function findNextPageButton() {
-    // First look for the specific Amtrak pagination button with ">" text
-    const pageLinks = document.querySelectorAll('button.page-link');
-    for (const btn of pageLinks) {
-      const text = btn.textContent?.trim() || '';
-      // The "next" button contains ">" 
-      if (text === '>' || text === '›' || text === '»') {
-        if (!btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
-          return btn;
-        }
-      }
+    const explicitNext = document.querySelector('li.pagination-next[aria-disabled="false"] a.page-link, li.pagination-next:not([aria-disabled="true"]) a.page-link');
+    if (explicitNext && isControlEnabled(explicitNext)) {
+      return explicitNext;
     }
 
-    const buttons = document.querySelectorAll('button');
+    const pageLinks = document.querySelectorAll('a.page-link, button.page-link');
+    for (const btn of pageLinks) {
+      if (!isControlEnabled(btn)) continue;
 
-    for (const btn of buttons) {
       const text = (btn.textContent?.trim() || '').toLowerCase();
       const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+      const title = (btn.getAttribute('title') || '').toLowerCase();
+      const rel = (btn.getAttribute('rel') || '').toLowerCase();
 
-      // Look for pagination/load more buttons
-      if (text.includes('later') || text.includes('next') ||
-        text.includes('more trains') || text.includes('show more') ||
-        ariaLabel.includes('later') || ariaLabel.includes('next')) {
-        // Make sure it's not disabled
-        if (!btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
-          return btn;
-        }
-      }
-    }
+      const looksLikeNext =
+        text === '>' || text === '›' || text === '»' ||
+        text.includes('next') || text.includes('later') ||
+        ariaLabel.includes('next') || ariaLabel.includes('later') ||
+        title.includes('next') || title.includes('later') ||
+        rel === 'next';
 
-    // Also look for arrow/chevron buttons
-    const arrowButtons = document.querySelectorAll('[class*="arrow"], [class*="chevron"], [class*="next"]');
-    for (const btn of arrowButtons) {
-      if (btn.tagName === 'BUTTON' && !btn.disabled) {
+      if (looksLikeNext) {
         return btn;
       }
     }
 
     return null;
+  }
+
+  function isControlEnabled(btn) {
+    if (!btn) return false;
+    const isDisabled =
+      (typeof btn.disabled === 'boolean' && btn.disabled) ||
+      btn.getAttribute('disabled') !== null ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.closest('[aria-disabled="true"], .disabled, .is-disabled, [class*="disabled"]');
+    return !isDisabled;
+  }
+
+  function clickButtonSafely(btn) {
+    try {
+      btn.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+      btn.focus();
+      btn.click();
+      return true;
+    } catch (error) {
+      workerLog('ERROR: Failed to click next-page button:', error.message);
+      return false;
+    }
+  }
+
+  function getActiveResultsPage() {
+    const activePageEl = document.querySelector('[aria-current="page"], .active .page-link, .page-item.active .page-link');
+    const activeText = (activePageEl?.textContent || '').trim();
+    const pageMatch = activeText.match(/\d+/);
+    return pageMatch ? Number(pageMatch[0]) : null;
+  }
+
+  function getCurrentResultsSignature() {
+    const cards = document.querySelectorAll('am-journey-card');
+    const firstTrainNums = [];
+
+    for (const card of cards) {
+      const trainNameEl = card.querySelector('.train-name span');
+      const trainText = (trainNameEl?.textContent || '').trim();
+      const trainMatch = trainText.match(/\d{1,4}/);
+      if (trainMatch) {
+        firstTrainNums.push(trainMatch[0]);
+      }
+      if (firstTrainNums.length >= 5) break;
+    }
+
+    const activePage = getActiveResultsPage();
+
+    return JSON.stringify({
+      activePage,
+      firstTrainNums
+    });
+  }
+
+  async function waitForResultsChange(previousDomSignature, timeoutMs = 8000) {
+    const start = Date.now();
+
+    while (Date.now() - start < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const domSignature = getCurrentResultsSignature();
+      if (domSignature !== previousDomSignature) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -395,7 +473,7 @@ if (window._amtrakPriceTrackerLoaded) {
       }
 
       // Debug: if this might be our target train, log more details
-      if (cardTrainNumber === targetTrainNumber) {
+      if (targetStr && String(cardTrainNumber) === targetStr) {
         workerLog(`  FOUND TARGET - Card ${index + 1}: Train #${cardTrainNumber}`);
       } else if (cardTrainNumber) {
         workerLog(`  Card ${index + 1}: Train #${cardTrainNumber}`);
@@ -406,7 +484,7 @@ if (window._amtrakPriceTrackerLoaded) {
       let classPricesMap = new Map(); // Use Map to dedupe by class+price
 
       // Debug: log button count for target train
-      if (cardTrainNumber === targetTrainNumber) {
+      if (targetStr && String(cardTrainNumber) === targetStr) {
         workerLog(`  Scanning ${fareButtons.length} .class-fare buttons for Train #${cardTrainNumber}:`);
       }
 
@@ -430,7 +508,7 @@ if (window._amtrakPriceTrackerLoaded) {
 
         if (price && price >= 20 && price <= 2000 && !isUnavailable) {
           // Debug: log for target train
-          if (cardTrainNumber === targetTrainNumber) {
+          if (targetStr && String(cardTrainNumber) === targetStr) {
             workerLog(`    Found: ${classTitle} $${price}`);
           }
 
@@ -471,17 +549,14 @@ if (window._amtrakPriceTrackerLoaded) {
         });
       }
 
-      // Convert map to array
       const classPrices = Array.from(classPricesMap.values());
 
       // If we found class-specific prices
       if (classPrices.length > 0) {
-        // Add all prices to the general list
         classPrices.forEach(cp => prices.push(cp.price));
 
         // Add train details to trains array
         if (cardTrainNumber) {
-          // Log detailed info for debugging
           workerLog(`    Train #${cardTrainNumber} fares:`, classPrices.map(cp =>
             `${cp.className || 'unknown'}${cp.fareType !== 'standard' ? ` (${cp.fareType})` : ''}: $${cp.price}`
           ).join(', '));
@@ -493,7 +568,7 @@ if (window._amtrakPriceTrackerLoaded) {
         }
 
         // Check if this is our target train
-        if (targetTrainNumber && cardTrainNumber === targetTrainNumber) {
+        if (targetStr && String(cardTrainNumber) === targetStr) {
           // Look for the target class price
           if (targetClassLower) {
             const classMatch = classPrices.find(cp => cp.className === targetClassLower);
@@ -522,7 +597,7 @@ if (window._amtrakPriceTrackerLoaded) {
           prices.push(cardPrice);
 
           // Check if this is our target train
-          if (targetTrainNumber && cardTrainNumber === targetTrainNumber) {
+          if (targetStr && String(cardTrainNumber) === targetStr) {
             workerLog(`Match! Train #${cardTrainNumber} price: $${cardPrice}`);
             trainPrice = cardPrice;
           }
