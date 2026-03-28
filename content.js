@@ -130,71 +130,51 @@ if (window._amtrakPriceTrackerLoaded) {
       // Find and fill date input
       const dateInput = document.querySelector('#am-form-field-control-4');
       if (dateInput) {
-        workerLog(' Found date input, attempting to fill date:', trip.travelDate);
-        workerLog(' Full trip data for verification:', trip.origin, '->', trip.destination, 'on', trip.travelDate);
+        workerLog(' Found date input, selecting date:', trip.travelDate);
         const [year, month, day] = trip.travelDate.split('-');
-        const formattedDate = `${month}/${day}/${year}`;
+        const targetDate = new Date(+year, +month - 1, +day);
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        // Build the aria-label the calendar uses, e.g. "Monday, April 6, 2026"
+        const ariaLabel = targetDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        workerLog(' Looking for cell with aria-label:', ariaLabel);
 
         dateInput.click();
-        dateInput.focus();
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        const dateSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        dateSetter.call(dateInput, formattedDate);
-        dateInput.dispatchEvent(new Event('input', { bubbles: true }));
-        dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Wait for calendar popup to appear
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Look for and click the Done/Find Trains button on the calendar popup
-        let calendarBtn = null;
-        const buttons = document.querySelectorAll('button');
-
-        // Look for the calendar's confirm button
-        for (const btn of buttons) {
-          const text = btn.textContent?.trim().toLowerCase() || '';
-          // Match various possible button texts
-          if (text.includes('find trains') || text.includes('done') ||
-            text.includes('apply') || text.includes('ok') ||
-            text.includes('select') || text.includes('confirm')) {
-            // Make sure it's inside a calendar/datepicker overlay, not the main form
-            const isInOverlay = btn.closest('.cdk-overlay-pane') ||
-              btn.closest('[class*="calendar"]') ||
-              btn.closest('[class*="datepicker"]') ||
-              btn.closest('[class*="picker"]');
-            if (isInOverlay) {
-              calendarBtn = btn;
-              break;
-            }
-          }
+        for (let i = 0; i < 12; i++) {
+          const dayCell = document.querySelector(`div.ngb-dp-day[aria-label="${ariaLabel}"]`);
+          if (dayCell && !dayCell.classList.contains('hidden')) break;
+          const nextBtn = document.querySelector('button[aria-label="Next month"]:not([disabled])');
+          if (!nextBtn) { workerLog(' No Next month button available'); break; }
+          nextBtn.click();
+          await new Promise(resolve => setTimeout(resolve, 400));
         }
 
-        if (calendarBtn) {
-          workerLog(' Found calendar button, clicking it');
-          calendarBtn.click();
+        // Click the target day
+        const dayCell = document.querySelector(`div.ngb-dp-day[aria-label="${ariaLabel}"]`);
+        if (dayCell) {
+          workerLog(' Clicking day cell');
+          dayCell.click();
+          await new Promise(resolve => setTimeout(resolve, 500));
         } else {
-          // Try clicking outside the calendar to close it
-          workerLog(' No calendar button found, clicking outside to close');
-          document.body.click();
-          // Also try Escape
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+          workerLog('ERROR: Could not find day cell for', ariaLabel);
         }
 
+        // Click Done to confirm
+        const doneBtn = document.querySelector('button[aria-label="Done"]');
+        if (doneBtn) {
+          workerLog(' Clicking Done');
+          doneBtn.click();
+        }
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Verify date was set
-        const dateValue = dateInput.value;
-        workerLog(' Date input value after setting:', dateValue);
-        if (!dateValue || dateValue.trim() === '') {
-          workerLog('ERROR: WARNING - Date field is empty!');
-        }
+        workerLog(' Date input value after setting:', dateInput.value);
       } else {
         workerLog('ERROR: Could not find date input');
         return { success: false, error: 'Could not find date input field' };
       }
 
-      // Wait longer for Angular form validation to complete
+      // Wait for Angular form validation
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Verify all form values before submitting
