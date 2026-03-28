@@ -54,7 +54,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     checkAllPrices().then(() => {
       sendResponse({ success: true });
     });
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (message.action === 'updateAlarmInterval') {
@@ -119,14 +119,16 @@ async function checkAllPrices() {
             trip.trainNotFound = false;
           }
 
-          // Add to price history
+          // Add to price history only if the specific train was found
           if (!trip.priceHistory) {
             trip.priceHistory = [];
           }
-          trip.priceHistory.push({
-            price: trip.currentPrice,
-            timestamp: new Date().toISOString()
-          });
+          if (!trip.trainNotFound) {
+            trip.priceHistory.push({
+              price: trip.currentPrice,
+              timestamp: new Date().toISOString()
+            });
+          }
 
           // Check if price dropped below paid price
           if (trip.currentPrice < trip.pricePaid) {
