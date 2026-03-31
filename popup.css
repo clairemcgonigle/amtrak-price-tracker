@@ -312,10 +312,22 @@ section h2 {
   margin-bottom: 6px;
 }
 
+.trip-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .trip-route {
   font-weight: 600;
   font-size: 14px;
   color: #1a5276;
+}
+
+.trip-train {
+  font-size: 12px;
+  color: #666;
 }
 
 .trip-date {

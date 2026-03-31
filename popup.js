@@ -44,6 +44,7 @@ tripForm.addEventListener('submit', async (e) => {
     destination: document.getElementById('destination').value.toUpperCase().trim(),
     travelDate: document.getElementById('travel-date').value,
     trainNumber: document.getElementById('train-number').value.trim() || null,
+    trainTime: document.getElementById('train-time').value || null,
     pricePaid: parseFloat(document.getElementById('price-paid').value),
     ticketClass: document.getElementById('ticket-class').value || null,
     currentPrice: null,
@@ -124,7 +125,8 @@ function createTripCard(trip) {
 
   const formattedDate = formatDate(trip.travelDate);
   const trainWarning = trip.trainNotFound ? ' ⚠️' : '';
-  const trainInfo = trip.trainNumber ? ` • Train #${trip.trainNumber}${trainWarning}` : '';
+  const timeInfo = trip.trainTime ? ` • ${formatTime(trip.trainTime)}` : '';
+  const trainLabel = trip.trainNumber ? `Train #${trip.trainNumber}${trainWarning}` : '';
 
   // Build price display section based on train found status
   let priceSection;
@@ -197,7 +199,10 @@ function createTripCard(trip) {
           ${passedBadge}
             <div class="trip-header">
               <span class="trip-route">${trip.origin} → ${trip.destination}</span>
-              <span class="trip-date">${formattedDate}${trainInfo}</span>
+              <div class="trip-header-right">
+                ${trainLabel ? `<span class="trip-train">${trainLabel}</span>` : ''}
+                <span class="trip-date">${formattedDate}${timeInfo}</span>
+              </div>
             </div>
             <div class="trip-prices">
               ${priceSection}
@@ -383,6 +388,16 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
+  });
+}
+
+function formatTime(timeString) {
+  const [hours, minutes] = timeString.split(':');
+  const date = new Date();
+  date.setHours(parseInt(hours), parseInt(minutes));
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
   });
 }
 

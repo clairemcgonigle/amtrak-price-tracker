@@ -35,16 +35,23 @@
             <input type="date" id="travel-date" required>
           </div>
           <div class="form-group">
-            <label for="train-number">Train #</label>
-            <input type="text" id="train-number" placeholder="e.g., 123">
+            <label for="train-time">Train Time</label>
+            <input type="time" id="train-time" placeholder="e.g., 14:30">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
+            <label for="train-number">Train #</label>
+            <input type="text" id="train-number" placeholder="e.g., 123">
+          </div>
+          <div class="form-group">
             <label for="price-paid">Price Paid ($)</label>
             <input type="number" id="price-paid" step="0.01" min="0" placeholder="89.00" required>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="ticket-class">Ticket Class</label>
             <select id="ticket-class">
