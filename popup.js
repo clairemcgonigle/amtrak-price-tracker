@@ -190,9 +190,10 @@ function createTripCard(trip) {
 
   const passedClass = tripHasPassed ? 'trip-passed' : '';
   const passedBadge = tripHasPassed ? '<span class="trip-passed-badge">Trip Passed</span>' : '';
+  const notFoundClass = trip.trainNotFound ? 'train-not-found-card' : '';
 
   return `
-    <div class="trip-card-wrapper ${passedClass}">
+    <div class="trip-card-wrapper ${passedClass} ${notFoundClass}">
       <div class="trip-card-container">
         <div class="trip-card-scroller" data-trip-id="${trip.id}">
           <div class="trip-card trip-card-info" data-trip-id="${trip.id}">

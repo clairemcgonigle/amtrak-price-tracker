@@ -177,7 +177,7 @@ section h2 {
 
 /* Trips List */
 #trips-list {
-  max-height: 300px;
+  max-height: 325px;
   overflow-y: auto;
   width: 100%;
 }
@@ -249,7 +249,7 @@ section h2 {
 
 .trip-card {
   width: 50%;
-  max-height: 125px;
+  max-height: 140px;
   flex-shrink: 0;
   scroll-snap-align: start;
   background: #f9f9f9;
@@ -257,6 +257,10 @@ section h2 {
   border-radius: 6px;
   padding: 10px;
   box-sizing: border-box;
+}
+
+.train-not-found-card .trip-card {
+  max-height: 160px;
 }
 
 .trip-card-chart {
@@ -432,6 +436,7 @@ section h2 {
   margin-top: 6px;
 }
 
+/* Delete button */
 .btn-delete {
   background: none;
   border: none;
