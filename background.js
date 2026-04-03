@@ -92,6 +92,9 @@ async function checkAllPrices() {
 
     console.log(`Checking prices for ${trips.length} trips`);
 
+    let anySuccess = false;
+    let lastError = null;
+
     for (const trip of trips) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -106,6 +109,16 @@ async function checkAllPrices() {
 
         // Always update lastChecked so we know a check was attempted
         trip.lastChecked = new Date().toISOString();
+
+        // Check if Amtrak returned an error (e.g., "unknown error")
+        if (priceResult !== null && typeof priceResult === 'object' && priceResult.error === 'amtrak_error') {
+          lastError = priceResult.errorText || 'Amtrak error';
+          console.log(`${trip.origin}→${trip.destination}: Amtrak error - ${lastError}`);
+          await updateTrip(trip);
+          console.log('Waiting 5 seconds before next trip...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          continue;
+        }
 
         if (priceResult !== null) {
           const wasTrainNotFound = trip.trainNotFound;
@@ -141,6 +154,7 @@ async function checkAllPrices() {
           }
 
           console.log(`${trip.origin}→${trip.destination}: $${trip.currentPrice} (paid: $${trip.pricePaid})${trip.trainNotFound ? ' [train not found]' : ''}`);
+          anySuccess = true;
         } else {
           console.log(`${trip.origin}→${trip.destination}: Price unavailable`);
         }
@@ -157,8 +171,13 @@ async function checkAllPrices() {
       }
     }
 
-    // Update last checked timestamp
-    await saveSettings({ lastChecked: new Date().toISOString() });
+    // Update last checked timestamp and status
+    const checkStatus = anySuccess ? 'success' : (lastError ? 'error' : 'no_data');
+    await saveSettings({
+      lastChecked: new Date().toISOString(),
+      lastCheckStatus: checkStatus,
+      lastCheckError: lastError
+    });
 
     // Notify popup to refresh
     chrome.runtime.sendMessage({ action: 'tripsUpdated' }).catch(() => {
@@ -250,6 +269,21 @@ async function fetchAmtrakPrice(trip) {
 
     if (!isResultsPage) {
       console.log('Not on results page, URL:', currentTab.url);
+      // Check if Amtrak is showing an error on the non-results page
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const errorCheck = await chrome.tabs.sendMessage(tab.id, { action: 'checkForErrors' });
+        if (errorCheck?.hasError) {
+          console.log('Amtrak error detected on non-results page:', errorCheck.errorText);
+          return { error: 'amtrak_error', errorText: errorCheck.errorText };
+        }
+      } catch (err) {
+        console.log('Error check on non-results page failed:', err.message);
+      }
       return null;
     }
 
@@ -284,6 +318,16 @@ async function fetchAmtrakPrice(trip) {
 
     if (!resultsReady) {
       console.log('Train results did not appear after waiting');
+      // Check if Amtrak is showing an error message
+      try {
+        const errorCheck = await chrome.tabs.sendMessage(tab.id, { action: 'checkForErrors' });
+        if (errorCheck?.hasError) {
+          console.log('Amtrak error detected:', errorCheck.errorText);
+          return { error: 'amtrak_error', errorText: errorCheck.errorText };
+        }
+      } catch (err) {
+        console.log('Error check failed:', err.message);
+      }
       return null;
     }
 

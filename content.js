@@ -51,6 +51,15 @@ if (window._amtrakPriceTrackerLoaded) {
       return true;
     }
 
+    if (message.action === 'checkForErrors') {
+      // Check if Amtrak is showing an error message instead of results
+      const alertText = document.querySelector('.alert-yellow-text');
+      const hasError = !!(alertText && alertText.textContent.includes('unknown error'));
+      workerLog('Error check:', hasError, alertText ? `"${alertText.textContent.trim()}"` : '(no alert element)');
+      sendResponse({ hasError, errorText: alertText ? alertText.textContent.trim() : null });
+      return true;
+    }
+
     return true;
   });
 

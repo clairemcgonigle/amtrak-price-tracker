@@ -372,9 +372,20 @@ async function updateLastChecked() {
   const settings = await getSettings();
   if (settings.lastChecked) {
     const date = new Date(settings.lastChecked);
-    lastCheckedSpan.textContent = formatDateTime(date);
+    const timeStr = formatDateTime(date);
+    if (settings.lastCheckStatus === 'error') {
+      lastCheckedSpan.textContent = `Last attempted check: ${timeStr}, no data found`;
+      lastCheckedSpan.title = settings.lastCheckError || 'Amtrak returned an error';
+    } else if (settings.lastCheckStatus === 'no_data') {
+      lastCheckedSpan.textContent = `Last attempted check: ${timeStr}, no data found`;
+      lastCheckedSpan.title = 'Price check ran but no prices were returned';
+    } else {
+      lastCheckedSpan.textContent = timeStr;
+      lastCheckedSpan.title = '';
+    }
   } else {
     lastCheckedSpan.textContent = 'Never';
+    lastCheckedSpan.title = '';
   }
 }
 
