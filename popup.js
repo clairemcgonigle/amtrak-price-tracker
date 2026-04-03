@@ -494,7 +494,15 @@ function setupChartHover(canvas) {
 
       tooltip.innerHTML = `<strong>$${closestDot.price.toFixed(2)}</strong><br>${dateStr} ${timeStr}`;
       tooltip.style.display = 'block';
-      tooltip.style.left = `${e.clientX + 10}px`;
+
+      // Position tooltip to the left if near the right edge
+      const popupWidth = document.documentElement.clientWidth;
+      const tooltipWidth = tooltip.offsetWidth || 100;
+      if (e.clientX + tooltipWidth + 20 > popupWidth) {
+        tooltip.style.left = `${e.clientX - tooltipWidth - 10}px`;
+      } else {
+        tooltip.style.left = `${e.clientX + 10}px`;
+      }
       tooltip.style.top = `${e.clientY - 30}px`;
     } else if (tooltip) {
       tooltip.style.display = 'none';
