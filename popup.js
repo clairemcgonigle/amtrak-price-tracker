@@ -70,6 +70,17 @@ async function loadTrips() {
     return;
   }
 
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Sort: future trips first, then past trips (most recent first)
+  trips.sort((a, b) => {
+    const aIsPast = a.travelDate < todayStr;
+    const bIsPast = b.travelDate < todayStr;
+    if (aIsPast !== bIsPast) return aIsPast ? 1 : -1;
+    return aIsPast ? b.travelDate.localeCompare(a.travelDate) : a.travelDate.localeCompare(b.travelDate);
+  });
+
   tripsList.innerHTML = trips.map(trip => createTripCard(trip)).join('');
 
   // Add delete button listeners
