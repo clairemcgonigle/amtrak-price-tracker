@@ -257,6 +257,7 @@ section h2 {
   border-radius: 6px;
   padding: 10px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .train-not-found-card .trip-card {
@@ -431,9 +432,9 @@ section h2 {
 }
 
 .trip-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
+  position: absolute;
+  bottom: 15px;
+  right: 8px;
 }
 
 /* Delete button */
@@ -647,7 +648,7 @@ input[type="checkbox"] {
 
 .trip-passed-badge {
   position: absolute;
-  bottom: 10px;
+  bottom: 15px;
   right: 35px;
   background: #1a5276;
   color: white;
