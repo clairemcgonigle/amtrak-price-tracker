@@ -96,12 +96,21 @@ async function checkAllPrices() {
     let lastError = null;
 
     for (const trip of trips) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      if (new Date(trip.travelDate + 'T00:00:00') < today) {
+      if (trip.travelDate < todayStr) {
         console.log(`Skipping past trip: ${trip.origin} → ${trip.destination}`);
         continue;
+      }
+
+      // If travel date is today and train has a known departure time, skip if it's already passed
+      if (trip.travelDate === todayStr && trip.trainTime) {
+        const [hours, minutes] = trip.trainTime.split(':').map(Number);
+        if (now.getHours() > hours || (now.getHours() === hours && now.getMinutes() >= minutes)) {
+          console.log(`Skipping departed trip: ${trip.origin} → ${trip.destination} (train time ${trip.trainTime} has passed)`);
+          continue;
+        }
       }
 
       try {

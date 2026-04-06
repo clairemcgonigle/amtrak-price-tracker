@@ -117,9 +117,9 @@ function createTripCard(trip) {
   const isPriceLower = priceDiff !== null && priceDiff > 0;
   const isPriceHigher = priceDiff !== null && priceDiff < 0;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tripHasPassed = new Date(trip.travelDate + 'T00:00:00') < today;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const tripHasPassed = trip.travelDate < todayStr;
 
   let currentPriceClass = tripHasPassed ? 'unavailable' : (isPriceLower ? 'lower' : (isPriceHigher ? 'higher' : 'current'));
 
