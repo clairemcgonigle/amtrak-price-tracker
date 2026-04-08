@@ -150,12 +150,47 @@ if (window._amtrakPriceTrackerLoaded) {
         dateInput.click();
         await new Promise(resolve => setTimeout(resolve, 1500));
 
+        // Navigate to the correct month - check if we need to go forward or backward
         for (let i = 0; i < 12; i++) {
           const dayCell = document.querySelector(`div.ngb-dp-day[aria-label="${ariaLabel}"]`);
           if (dayCell && !dayCell.classList.contains('hidden')) break;
-          const nextBtn = document.querySelector('button[aria-label="Next month"]:not([disabled])');
-          if (!nextBtn) { workerLog(' No Next month button available'); break; }
-          nextBtn.click();
+
+          const monthLabel = document.querySelector('.ngb-dp-navigation-select .ngb-dp-month-name, .ngb-dp-header .ngb-dp-month-name, [class*="calendar"] [class*="month"], .ngb-dp-navigation span');
+          let needsPrev = false;
+          if (monthLabel) {
+            const headerText = monthLabel.textContent.trim();
+            const headerDate = new Date(headerText + ' 1');
+            if (!isNaN(headerDate) && headerDate > targetDate) {
+              needsPrev = true;
+            }
+          }
+          if (!needsPrev) {
+            const currentMonthEl = document.querySelector('.ngb-dp-month-name');
+            if (currentMonthEl) {
+              const parts = currentMonthEl.textContent.trim().split(' ');
+              if (parts.length >= 2) {
+                const displayedMonth = monthNames.indexOf(parts[0]);
+                const displayedYear = parseInt(parts[1]);
+                if (!isNaN(displayedYear) && displayedMonth >= 0) {
+                  const targetMonth = +month - 1;
+                  const targetYear = +year;
+                  if (targetYear < displayedYear || (targetYear === displayedYear && targetMonth < displayedMonth)) {
+                    needsPrev = true;
+                  }
+                }
+              }
+            }
+          }
+
+          if (needsPrev) {
+            const prevBtn = document.querySelector('button[aria-label="Previous month"]:not([disabled])');
+            if (!prevBtn) { workerLog(' No Previous month button available'); break; }
+            prevBtn.click();
+          } else {
+            const nextBtn = document.querySelector('button[aria-label="Next month"]:not([disabled])');
+            if (!nextBtn) { workerLog(' No Next month button available'); break; }
+            nextBtn.click();
+          }
           await new Promise(resolve => setTimeout(resolve, 400));
         }
 
