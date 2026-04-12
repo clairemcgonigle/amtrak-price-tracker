@@ -92,6 +92,9 @@ async function checkAllPrices() {
 
     console.log(`Checking prices for ${trips.length} trips`);
 
+    // Sort by date, soonest first
+    trips.sort((a, b) => a.travelDate.localeCompare(b.travelDate));
+
     let anySuccess = false;
     let lastError = null;
 
