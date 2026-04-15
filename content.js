@@ -614,7 +614,8 @@ if (window._amtrakPriceTrackerLoaded) {
         }
       } else {
         // Fallback: extract any price from the card text
-        const priceMatch = cardText.match(/\$\s*([\d,]+(?:\.\d{2})?)/);
+        const fallbackText = card.textContent || '';
+        const priceMatch = fallbackText.match(/\$\s*([\d,]+(?:\.\d{2})?)/);
         const cardPrice = priceMatch ? parseFloat(priceMatch[1].replace(',', '')) : null;
 
         if (cardPrice && cardPrice >= 20 && cardPrice <= 2000) {
