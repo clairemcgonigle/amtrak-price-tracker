@@ -641,6 +641,25 @@ input[type="checkbox"] {
 }
 
 /* Styling for when a trip has passed */
+.past-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #999;
+  margin: 10px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.past-separator::before,
+.past-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
 .trip-passed .trip-card {
   opacity: 0.6;
   filter: grayscale(40%);

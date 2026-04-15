@@ -81,7 +81,20 @@ async function loadTrips() {
     return aIsPast ? b.travelDate.localeCompare(a.travelDate) : a.travelDate.localeCompare(b.travelDate);
   });
 
-  tripsList.innerHTML = trips.map(trip => createTripCard(trip)).join('');
+  const hasPastTrips = trips.some(t => t.travelDate < todayStr);
+  const hasFutureTrips = trips.some(t => t.travelDate >= todayStr);
+  const pastSeparator = hasPastTrips && hasFutureTrips ? '<div class="past-separator">Past Trips</div>' : '';
+
+  tripsList.innerHTML = trips.map(trip => {
+    const card = createTripCard(trip);
+    // Insert separator before the first past trip
+    if (trip.travelDate < todayStr && pastSeparator && !tripsList._separatorAdded) {
+      tripsList._separatorAdded = true;
+      return pastSeparator + card;
+    }
+    return card;
+  }).join('');
+  delete tripsList._separatorAdded;
 
   // Add delete button listeners
   tripsList.querySelectorAll('.btn-delete').forEach(btn => {
